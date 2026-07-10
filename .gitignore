@@ -1,0 +1,51 @@
+# 环境变量
+.env
+
+# 数据库密码和密钥
+*.pem
+*.key
+*secret*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.whl
+venv/
+.venv/
+env/
+.env/
+
+# Node
+node_modules/
+dist/
+.output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 大数据
+hadoop-data/
+spark-logs/
+*.log
+
+# 大型数据文件
+*.parquet
+*.orc
+data_source/data/
+*.csv
+!data_processing/dictionaries/*.csv
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
