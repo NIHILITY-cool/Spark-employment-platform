@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.employment.entity.Job;
 import com.employment.entity.JobPreference;
 import com.employment.entity.JobSkill;
+import com.employment.entity.Student;
 import com.employment.entity.StudentSkill;
 import com.employment.mapper.JobMapper;
 import com.employment.mapper.JobPreferenceMapper;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.math.BigDecimal;
 
 @Service
 public class RecommendationService {
@@ -87,40 +89,64 @@ public class RecommendationService {
     private JobRecommendation scoreOne(Job job, List<JobSkill> jobSkills, Context context) {
         List<String> matched = new ArrayList<>();
         List<String> missing = new ArrayList<>();
-        for (JobSkill skill : jobSkills) {
-            if (context.mastered.contains(normalize(skill.skillName))) matched.add(skill.skillName);
-            else missing.add(skill.skillName);
+        double totalSkillWeight = 0;
+        double matchedSkillWeight = 0;
+        List<JobSkill> orderedSkills = jobSkills.stream()
+                .sorted(Comparator.comparingDouble(this::skillWeight).reversed()
+                        .thenComparing(skill -> skill.skillName))
+                .toList();
+        for (JobSkill skill : orderedSkills) {
+            double weight = skillWeight(skill);
+            totalSkillWeight += weight;
+            if (context.mastered.contains(normalize(skill.skillName))) {
+                matched.add(skill.skillName);
+                matchedSkillWeight += weight;
+            } else {
+                missing.add(skill.skillName);
+            }
         }
-        int skillScore = jobSkills.isEmpty() ? 0 : (int) Math.round(60.0 * matched.size() / jobSkills.size());
-        int preferenceScore = 0;
+
+        double evidenceConfidence = Math.min(1.0, totalSkillWeight / 3.0);
+        int skillScore = totalSkillWeight == 0 ? 0
+                : (int) Math.round(40.0 * matchedSkillWeight / totalSkillWeight * evidenceConfidence);
+        int directionScore = 0;
+        int cityScore = 0;
+        int salaryScore = 0;
         List<String> reasons = new ArrayList<>();
         JobPreference preference = context.preference;
         if (preference != null && StringUtils.hasText(preference.expectedJob)
                 && job.jobCategory != null && job.jobCategory.contains(preference.expectedJob)) {
-            preferenceScore += 15; reasons.add("岗位方向符合期望");
+            directionScore = 15;
+            reasons.add("岗位方向符合期望");
         }
         if (preference != null && StringUtils.hasText(preference.expectedCity)
                 && normalizeCity(preference.expectedCity).equals(normalizeCity(job.city))) {
-            preferenceScore += 10; reasons.add("工作城市符合期望");
+            cityScore = 10;
+            reasons.add("工作城市符合期望");
         } else if (preference != null && Boolean.TRUE.equals(preference.acceptRemoteCity)) {
-            preferenceScore += 4;
+            cityScore = 4;
         }
         if (preference != null && salaryOverlaps(preference, job)) {
-            preferenceScore += 10; reasons.add("薪资区间有重合");
+            salaryScore = 5;
+            reasons.add("薪资区间有重合");
         }
-        preferenceScore += 5;
+        int educationScore = educationScore(context.student.education, job.educationRequirement);
+        int experienceScore = experienceScore(job.experienceRequirement);
         if (!matched.isEmpty()) reasons.add("已掌握 " + String.join("、", matched.stream().limit(3).toList()));
+        if (!jobSkills.isEmpty() && totalSkillWeight < 3) reasons.add("岗位技能证据较少，技能分已折减");
         String reason = reasons.isEmpty() ? "根据岗位活跃度与学生技能进行基础匹配" : String.join("；", reasons);
-        return new JobRecommendation(job, Math.min(100, skillScore + preferenceScore), skillScore, matched, missing, reason);
+        int totalScore = skillScore + experienceScore + directionScore + educationScore + cityScore + salaryScore;
+        return new JobRecommendation(job, totalScore, skillScore, experienceScore, directionScore,
+                educationScore, cityScore, salaryScore, matched, missing, reason);
     }
 
     private Context context(Long studentId) {
-        studentProfileService.requiredStudent(studentId);
+        Student student = studentProfileService.requiredStudent(studentId);
         List<StudentSkill> skills = studentSkillMapper.selectList(new QueryWrapper<StudentSkill>().eq("student_id", studentId));
         List<String> names = skills.stream().map(skill -> skill.skillName).filter(StringUtils::hasText).sorted().toList();
         Set<String> normalized = new LinkedHashSet<>();
         names.forEach(name -> normalized.add(normalize(name)));
-        return new Context(normalized, names, jobPreferenceMapper.selectById(studentId));
+        return new Context(student, normalized, names, jobPreferenceMapper.selectById(studentId));
     }
 
     private QueryWrapper<Job> candidateQuery(JobPreference preference) {
@@ -137,11 +163,45 @@ public class RecommendationService {
         return preference.salaryMin <= job.salaryMax && job.salaryMin <= preference.salaryMax;
     }
 
+    private double skillWeight(JobSkill skill) {
+        BigDecimal weight = skill.skillWeight;
+        return weight == null || weight.signum() <= 0 ? 1.0 : weight.doubleValue();
+    }
+
+    static int educationScore(String studentEducation, String requirement) {
+        int requiredRank = educationRank(requirement);
+        if (requiredRank == 0) return 10;
+        return educationRank(studentEducation) >= requiredRank ? 10 : 0;
+    }
+
+    static int experienceScore(String requirement) {
+        String normalized = normalizeStatic(requirement);
+        if (normalized.isEmpty() || normalized.contains("不限") || normalized.contains("应届")
+                || normalized.contains("在校")) return 20;
+        if (normalized.contains("1年以内") || normalized.contains("一年以内")) return 16;
+        if (normalized.contains("1-3年") || normalized.contains("1至3年")) return 8;
+        return 0;
+    }
+
+    private static int educationRank(String value) {
+        String normalized = normalizeStatic(value);
+        if (normalized.contains("博士") || normalized.contains("doctor")) return 4;
+        if (normalized.contains("硕士") || normalized.contains("master")) return 3;
+        if (normalized.contains("本科") || normalized.contains("bachelor")) return 2;
+        if (normalized.contains("专科") || normalized.contains("大专") || normalized.contains("college")) return 1;
+        return 0;
+    }
+
+    private static String normalizeStatic(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT).replace("—", "-").replace("–", "-");
+    }
+
     private String normalize(String value) { return value == null ? "" : value.trim().toLowerCase(Locale.ROOT); }
     private String normalizeCity(String value) {
         String normalized = value == null ? "" : value.trim().replaceFirst("市+$", "");
         return "中国".equals(normalized) ? "全国" : normalized;
     }
 
-    private record Context(Set<String> mastered, List<String> masteredNames, JobPreference preference) { }
+    private record Context(Student student, Set<String> mastered, List<String> masteredNames,
+                           JobPreference preference) { }
 }

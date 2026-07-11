@@ -66,7 +66,7 @@ mysql -u root -p < ../database/schema.sql
 - `GET /api/recommendations/{jobKey}/match?studentId={id}` - 单岗位匹配详情
 - `GET /api/recommendations/skill-gap?studentId={id}` - 根据 Top10 计算技能差距
 
-推荐首版从 MySQL 中筛选至多 300 个有效候选岗位，综合技能覆盖、岗位方向、城市和薪资区间进行计算；结果是实时计算的，不写回正式表。
+推荐首版从 MySQL 中筛选至多 300 个有效候选岗位，综合技能、经历要求、期望岗位方向、学历、城市和薪资区间进行计算；岗位技能证据不足 3 个时会折减技能分。结果实时计算，不写回正式表。
 
 认证、项目/实习经历和高校聚合接口依赖尚未采集的学生业务数据，暂不对外宣称已实现，后续应在对应数据表与批处理结果准备后再接入。
 
