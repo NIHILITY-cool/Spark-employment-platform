@@ -70,6 +70,12 @@ mysql -u root -p < ../database/schema.sql
 
 推荐响应返回 `skillScore`、`experienceScore`、`directionScore`、`educationScore`、`cityScore` 和 `salaryScore` 六个维度，前端据此展示可解释的匹配轨道。
 
+### 高校培养参考
+
+- `GET /api/university/training-alignment?major={专业}&city={地区}` - 读取专业对应的公开岗位样本、低经验门槛岗位、薪资、行业、学历、技能和地区岗位方向矩阵
+
+当前支持数据科学与大数据技术、计算机科学与技术、软件工程、统计学和人工智能五个专业方向。接口基于 Spark 清洗并写入 MySQL 的岗位数据做即席聚合，不使用毕业生去向数据，也不输出培养质量结论。
+
 认证、项目/实习经历和高校聚合接口依赖尚未采集的学生业务数据，暂不对外宣称已实现，后续应在对应数据表与批处理结果准备后再接入。
 
 ## 测试方法

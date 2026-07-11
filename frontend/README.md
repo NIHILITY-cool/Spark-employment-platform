@@ -36,6 +36,7 @@ npm run dev
 - 演示学生画像编辑、技能增删和等级维护
 - 就业期望维护，保存后自动重算推荐
 - Top10 推荐、六维匹配轨道、推荐理由和技能差距
+- 高校培养方向场景分析、技能组合覆盖率、行业/学历结构和地区岗位需求矩阵
 - 桌面与移动端 Playwright 交互测试
 
 ### 学生端
@@ -71,3 +72,12 @@ npm run dev
 ## 当前进度
 
 参见 `docs/11-progress-log.md`
+
+## 前端测试
+
+```bash
+npm run test:e2e
+LIVE_API=1 npm run test:e2e -- --grep "live Spark"
+```
+
+常规测试使用稳定的 API 契约数据；`LIVE_API=1` 显式验证虚拟机上的真实 Spark/MySQL 数据链路。

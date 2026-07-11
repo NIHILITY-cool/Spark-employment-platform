@@ -1,7 +1,8 @@
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { ArrowDown, ArrowRight, ChevronDown, Clock3, GraduationCap, Heart, MapPin, Search, UserRound } from '@lucide/vue'
+import { ArrowDown, ArrowRight, Building2, ChevronDown, Clock3, GraduationCap, Heart, MapPin, Search, UserRound } from '@lucide/vue'
 import StudentWorkspace from './components/StudentWorkspace.vue'
+import UniversityWorkspace from './components/UniversityWorkspace.vue'
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://192.168.64.2:8082/api'
 const loading = ref(false)
@@ -231,8 +232,12 @@ onMounted(async () => {
         <button :class="{ active: view === 'market' }" type="button" @click="showMarket('#jobs')">岗位市场</button>
         <button type="button" @click="showMarket('#skills')">技能信号</button>
         <button :class="{ active: view === 'student' }" type="button" @click="openStudent('profile')">我的画像</button>
+        <button :class="{ active: view === 'university' }" type="button" @click="view = 'university'">高校参考</button>
       </nav>
-      <button class="profile-button" type="button" @click="openStudent('recommendations')"><UserRound :size="15" />学生入口<ArrowRight :size="15" /></button>
+      <div class="top-actions">
+        <button class="university-button" type="button" title="高校培养参考" @click="view = 'university'"><Building2 :size="15" /><span>高校端</span></button>
+        <button class="profile-button" type="button" @click="openStudent('recommendations')"><UserRound :size="15" />学生入口<ArrowRight :size="15" /></button>
+      </div>
     </header>
 
     <template v-if="view === 'market'">
@@ -296,6 +301,7 @@ onMounted(async () => {
     </section>
     </template>
 
-    <StudentWorkspace v-else :api-base="apiBase" :student-id="1" :city-options="cityOptions" :category-options="categoryOptions" :initial-tab="studentTab" @back-to-market="showMarket()" />
+    <StudentWorkspace v-else-if="view === 'student'" :api-base="apiBase" :student-id="1" :city-options="cityOptions" :category-options="categoryOptions" :initial-tab="studentTab" @back-to-market="showMarket()" />
+    <UniversityWorkspace v-else :api-base="apiBase" :city-options="cityOptions" @back-to-market="showMarket()" />
   </main>
 </template>

@@ -1167,6 +1167,8 @@ data_processing/spark_jobs/
 
 高校端主要展示本校学生的汇总分析结果。对于就业困难学生，仅向具有相应权限的高校就业指导人员展示必要的学生信息、匹配结果和困难原因。
 
+当前拿不到真实毕业生去向与规模化学生数据，因此高校端先实现不依赖毕业生数据的市场需求分析、专业—岗位—技能映射和培养方向场景推演。学生汇总、困难学生、毕业届对比等功能仅在获得授权匿名数据后启用，不使用伪造数据形成正式结论。
+
 ### 第一阶段：学生总体情况分析
 
 统计：
@@ -1338,6 +1340,7 @@ GET /api/university/major-skill-gap
 GET /api/university/market-demand
 GET /api/university/cohort-comparison
 GET /api/university/training-suggestions
+GET /api/university/training-alignment
 ```
 
 ### 高校端页面
@@ -1352,6 +1355,7 @@ GET /api/university/training-suggestions
 - 专业技能差距分析
 - 毕业届对比分析
 - 培养与就业指导建议
+- 培养方向场景分析
 
 ### 本模块交付物
 
