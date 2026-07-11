@@ -12,5 +12,7 @@ class LocationScopeTest {
         assertTrue(LocationScope.isCity("成都"));
         assertFalse(LocationScope.isCity("广东"));
         assertFalse(LocationScope.isCity("全国"));
+        assertFalse(LocationScope.isCity("技术与"));
+        assertFalse(LocationScope.isCity("地点待定"));
     }
 }

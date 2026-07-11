@@ -15,6 +15,16 @@ def test_resolve_city_prefers_city_level_district() -> None:
     assert resolve_city("四川省", "成都市") == ("成都", "city")
 
 
+def test_resolve_city_canonicalizes_embedded_city_names() -> None:
+    assert resolve_city("新疆乌鲁木齐") == ("乌鲁木齐", "city")
+    assert resolve_city("宁波余姚市三七") == ("宁波", "city")
+
+
+def test_resolve_city_rejects_free_text_and_province_only_values() -> None:
+    assert resolve_city("广东省") == ("地点待定", "province")
+    assert resolve_city("拓展海外") == ("地点待定", "unknown")
+
+
 def test_resolve_city_extracts_city_from_job_location_text() -> None:
     description = "岗位职责略。工作地点：广东省广州市天河区珠江新城。"
     assert city_from_location_text(description) == "广州"
