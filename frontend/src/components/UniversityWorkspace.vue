@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from '@lucide/vue'
 import { apiRequest } from '../api/client'
+import SearchSelect from './SearchSelect.vue'
 
 const props = defineProps({
   apiBase: { type: String, required: true },
@@ -121,8 +122,8 @@ onMounted(() => loadAnalysis(true))
     </header>
 
     <form class="analysis-controls" @submit.prevent="loadAnalysis(false)">
-      <label><GraduationCap :size="16" /><span>专业方向</span><select v-model="major" @change="changeMajor"><option v-for="item in majors" :key="item">{{ item }}</option></select></label>
-      <label><MapPinned :size="16" /><span>地区范围</span><select v-model="city"><option value="">全国岗位</option><option v-for="item in cityOptions" :key="item">{{ item }}</option></select></label>
+      <div class="analysis-control"><GraduationCap :size="16" /><span>专业方向</span><SearchSelect v-model="major" class="analysis-picker" label="专业方向" placeholder="搜索专业方向" :allow-empty="false" :options="majors" @select="changeMajor" /></div>
+      <div class="analysis-control"><MapPinned :size="16" /><span>地区范围</span><SearchSelect v-model="city" class="analysis-picker" label="地区范围" placeholder="搜索地区" empty-label="全国岗位" :options="cityOptions" /></div>
       <button class="command primary" type="submit" :disabled="loading"><LoaderCircle v-if="loading" class="spin" :size="16" /><RefreshCw v-else :size="16" />更新分析</button>
     </form>
 

@@ -24,6 +24,7 @@ import {
   X,
 } from '@lucide/vue'
 import { apiRequest } from '../api/client'
+import SearchSelect from './SearchSelect.vue'
 
 const props = defineProps({
   apiBase: { type: String, required: true },
@@ -52,6 +53,7 @@ const skills = ref([])
 const recommendations = ref([])
 const skillGap = ref(null)
 const newSkill = reactive({ skillName: '', skillLevel: 3 })
+const educationOptions = ['专科', '本科', '硕士', '博士', 'Bachelor']
 
 const averageScore = computed(() => {
   if (!recommendations.value.length) return 0
@@ -261,7 +263,7 @@ onMounted(loadWorkspace)
           <label><span>学号</span><input v-model="profile.studentNo" placeholder="填写学号" /></label>
           <label><span>学院</span><input v-model="profile.college" required placeholder="例如：计算机学院" /></label>
           <label><span>专业</span><input v-model="profile.major" required placeholder="例如：数据科学" /></label>
-          <label><span>学历</span><select v-model="profile.education" required><option value="">选择学历</option><option>专科</option><option>本科</option><option>硕士</option><option>博士</option><option>Bachelor</option></select></label>
+          <label><span>学历</span><SearchSelect v-model="profile.education" label="学历" placeholder="搜索学历" empty-label="清除学历" :options="educationOptions" /></label>
           <label><span>毕业年份</span><input v-model.number="profile.graduationYear" required type="number" min="2024" max="2100" /></label>
         </div>
       </form>
@@ -291,8 +293,8 @@ onMounted(loadWorkspace)
           </button>
         </div>
         <div class="form-grid preference-grid">
-          <label><span>岗位方向</span><select v-model="preference.expectedJob"><option value="">不限方向</option><option v-for="item in categoryOptions" :key="item">{{ item }}</option></select></label>
-          <label><span>期望城市</span><select v-model="preference.expectedCity"><option value="">不限城市</option><option v-for="item in cityOptions" :key="item">{{ item }}</option></select></label>
+          <label><span>岗位方向</span><SearchSelect v-model="preference.expectedJob" label="岗位方向" placeholder="搜索岗位方向" empty-label="不限方向" :options="categoryOptions" /></label>
+          <label><span>期望城市</span><SearchSelect v-model="preference.expectedCity" label="期望城市" placeholder="搜索期望城市" empty-label="不限城市" :options="cityOptions" /></label>
           <label><span>期望行业</span><input v-model="preference.expectedIndustry" placeholder="可选" /></label>
           <label><span>最低月薪</span><input v-model.number="preference.salaryMin" type="number" min="0" step="1000" /></label>
           <label><span>最高月薪</span><input v-model.number="preference.salaryMax" type="number" min="0" step="1000" /></label>

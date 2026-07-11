@@ -5,5 +5,7 @@ import './picker.css'
 import './workspace.css'
 import './university.css'
 import './role-landing.css'
+import './search-select.css'
+import './skills-page.css'
 
 createApp(App).mount('#app')

@@ -1,7 +1,8 @@
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { ArrowDown, ArrowRight, ChevronDown, Clock3, GraduationCap, Heart, MapPin, Search, UserRound } from '@lucide/vue'
+import { ArrowDown, ArrowRight, ChartNoAxesCombined, Clock3, Crosshair, GraduationCap, Heart, MapPin, Search, Sparkles, UserRound } from '@lucide/vue'
 import RoleLanding from './components/RoleLanding.vue'
+import SearchSelect from './components/SearchSelect.vue'
 import StudentWorkspace from './components/StudentWorkspace.vue'
 import UniversityWorkspace from './components/UniversityWorkspace.vue'
 
@@ -18,13 +19,10 @@ const cityStats = ref([])
 const hotSkills = ref([])
 const cityOptions = ref([])
 const categoryOptions = ref([])
-const activePicker = ref('')
-const citySearch = ref('')
-const categorySearch = ref('')
-const activeOptionIndex = ref(-1)
 const view = ref('landing')
 const studentTab = ref('profile')
 const favorites = ref(new Set(JSON.parse(localStorage.getItem('favoriteJobs') || '[]')))
+const selectedSkill = ref('')
 
 const demoJobs = [
   { jobKey: 'ncss-demo-1', jobName: '大数据开发工程师', companyName: '华川数智科技', city: '成都', jobCategory: '大数据开发', salaryMin: 9000, salaryMax: 14000, educationRequirement: '本科及以上', experienceRequirement: '经验不限', industry: '计算机软件' },
@@ -35,8 +33,18 @@ const demoJobs = [
 const demoCities = [...new Set(demoJobs.map((job) => job.city))]
 const demoCategories = [...new Set(demoJobs.map((job) => job.jobCategory))]
 const headlineTotal = computed(() => (total.value || 11559).toLocaleString())
-const matchingCities = computed(() => filterOptions(cityOptions.value, citySearch.value))
-const matchingCategories = computed(() => filterOptions(categoryOptions.value, categorySearch.value))
+const skillSignals = computed(() => {
+  const ordered = [...hotSkills.value].sort((a, b) => Number(b.metricValue) - Number(a.metricValue))
+  const peak = Math.max(1, ...ordered.map((item) => Number(item.metricValue || 0)))
+  return ordered.map((item, index) => ({
+    name: item.dimensionKey,
+    mentions: Number(item.metricValue || 0),
+    rank: index + 1,
+    strength: Math.max(4, Math.round(Number(item.metricValue || 0) / peak * 100)),
+  }))
+})
+const skillMentionTotal = computed(() => skillSignals.value.reduce((sum, item) => sum + item.mentions, 0))
+const focusedSkill = computed(() => skillSignals.value.find((item) => item.name === selectedSkill.value) || skillSignals.value[0])
 
 function salary(job) {
   if (!job.salaryMin || !job.salaryMax) return '薪资面议'
@@ -59,75 +67,6 @@ function mergeCityStats(items) {
     .sort((a, b) => b.metricValue - a.metricValue || a.dimensionKey.localeCompare(b.dimensionKey, 'zh-CN'))
 }
 
-function filterOptions(options, term) {
-  const normalized = term.trim().toLocaleLowerCase()
-  return normalized ? options.filter((item) => item.toLocaleLowerCase().includes(normalized)) : options
-}
-
-function pickerOptions(kind) {
-  return kind === 'city' ? matchingCities.value : matchingCategories.value
-}
-
-function openPicker(kind) {
-  activePicker.value = kind
-  activeOptionIndex.value = pickerOptions(kind).length ? 0 : -1
-}
-
-function togglePicker(kind) {
-  if (activePicker.value === kind) {
-    activePicker.value = ''
-    return
-  }
-  openPicker(kind)
-}
-
-function updatePickerSearch(kind) {
-  const query = kind === 'city' ? citySearch.value : categorySearch.value
-  const selected = kind === 'city' ? city : category
-  if (query !== selected.value) selected.value = ''
-  openPicker(kind)
-}
-
-function choosePickerOption(kind, option) {
-  if (kind === 'city') {
-    city.value = option
-    citySearch.value = option
-  } else {
-    category.value = option
-    categorySearch.value = option
-  }
-  activePicker.value = ''
-  activeOptionIndex.value = -1
-}
-
-function clearPicker(kind) {
-  if (kind === 'city') {
-    city.value = ''
-    citySearch.value = ''
-  } else {
-    category.value = ''
-    categorySearch.value = ''
-  }
-  activePicker.value = ''
-}
-
-function handlePickerKeydown(kind, event) {
-  const options = pickerOptions(kind)
-  if (event.key === 'ArrowDown') {
-    event.preventDefault()
-    if (activePicker.value !== kind) openPicker(kind)
-    else activeOptionIndex.value = Math.min(activeOptionIndex.value + 1, options.length - 1)
-  } else if (event.key === 'ArrowUp') {
-    event.preventDefault()
-    activeOptionIndex.value = Math.max(activeOptionIndex.value - 1, 0)
-  } else if (event.key === 'Enter' && activePicker.value === kind && activeOptionIndex.value >= 0) {
-    event.preventDefault()
-    choosePickerOption(kind, options[activeOptionIndex.value])
-  } else if (event.key === 'Escape') {
-    activePicker.value = ''
-  }
-}
-
 async function loadMarket() {
   try {
     const [cityResponse, skillResponse] = await Promise.all([
@@ -137,6 +76,7 @@ async function loadMarket() {
     if (!cityResponse.ok || !skillResponse.ok) throw new Error('market unavailable')
     cityStats.value = mergeCityStats(await cityResponse.json())
     hotSkills.value = await skillResponse.json()
+    if (!selectedSkill.value || !hotSkills.value.some((item) => item.dimensionKey === selectedSkill.value)) selectedSkill.value = hotSkills.value[0]?.dimensionKey || ''
   } catch {
     cityStats.value = [
       { dimensionKey: '成都', metricValue: 1255 }, { dimensionKey: '北京', metricValue: 722 },
@@ -146,6 +86,7 @@ async function loadMarket() {
       { dimensionKey: 'Python', metricValue: 841 }, { dimensionKey: 'Java', metricValue: 782 },
       { dimensionKey: 'SQL', metricValue: 669 }, { dimensionKey: 'Spark', metricValue: 315 },
     ]
+    if (!selectedSkill.value) selectedSkill.value = hotSkills.value[0]?.dimensionKey || ''
   }
 }
 
@@ -190,8 +131,8 @@ async function search() {
 
 function reset() {
   keyword.value = ''
-  clearPicker('city')
-  clearPicker('category')
+  city.value = ''
+  category.value = ''
   search()
 }
 
@@ -223,6 +164,12 @@ function showMarket(anchor = '') {
   })
 }
 
+function showSkills() {
+  view.value = 'skills'
+  if (!selectedSkill.value) selectedSkill.value = skillSignals.value[0]?.name || ''
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 function toggleFavorite(jobKey) {
   const next = new Set(favorites.value)
   if (next.has(jobKey)) next.delete(jobKey)
@@ -250,7 +197,7 @@ onMounted(async () => {
       </button>
       <nav>
         <button :class="{ active: view === 'market' }" type="button" @click="showMarket('#jobs')">岗位市场</button>
-        <button type="button" @click="showMarket('#skills')">技能信号</button>
+        <button :class="{ active: view === 'skills' }" type="button" @click="showSkills">技能信号</button>
         <button :class="{ active: view === 'student' }" type="button" @click="openStudent('profile')">我的画像</button>
       </nav>
       <div class="top-actions">
@@ -258,6 +205,11 @@ onMounted(async () => {
         <button class="profile-button" type="button" @click="openStudent('recommendations')"><UserRound :size="15" />我的工作台<ArrowRight :size="15" /></button>
       </div>
     </header>
+    <div class="student-mobile-nav" role="tablist" aria-label="学生端页面">
+      <button :class="{ active: view === 'market' }" type="button" role="tab" :aria-selected="view === 'market'" @click="showMarket()">岗位市场</button>
+      <button :class="{ active: view === 'skills' }" type="button" role="tab" :aria-selected="view === 'skills'" @click="showSkills">技能信号</button>
+      <button :class="{ active: view === 'student' }" type="button" role="tab" :aria-selected="view === 'student'" @click="openStudent('profile')">我的画像</button>
+    </div>
 
     <template v-if="view === 'market'">
     <section class="hero">
@@ -281,24 +233,8 @@ onMounted(async () => {
       <div class="section-head"><div><p class="eyebrow">01 / 市场岗位</p><h2>从市场里挑选方向</h2></div><p>筛选条件来自你的偏好，而不是一份冷冰冰的岗位清单。</p></div>
       <form class="filter-bar" @submit.prevent="search">
         <label class="search-field"><Search :size="18" /><input v-model="keyword" placeholder="搜索岗位或公司" /></label>
-        <div class="filter-picker" @focusout="activePicker = ''">
-          <Search class="picker-search-icon" :size="17" aria-hidden="true" />
-          <input v-model="citySearch" class="picker-input" role="combobox" aria-label="搜索或选择城市" :aria-expanded="activePicker === 'city'" aria-controls="city-picker-options" autocomplete="off" placeholder="搜索城市" @focus="openPicker('city')" @input="updatePickerSearch('city')" @keydown="handlePickerKeydown('city', $event)" />
-          <button class="picker-toggle" type="button" aria-label="展开城市选项" @mousedown.prevent @click="togglePicker('city')"><ChevronDown :size="17" /></button>
-          <div v-if="activePicker === 'city'" id="city-picker-options" class="picker-menu" role="listbox" aria-label="城市匹配选项">
-            <div class="picker-menu-head"><span>{{ matchingCities.length }} 个匹配城市</span><button type="button" @mousedown.prevent @click="clearPicker('city')">全部</button></div>
-            <div class="picker-options"><button v-for="(item, index) in matchingCities" :key="item" class="picker-option" :class="{ active: index === activeOptionIndex, selected: item === city }" type="button" role="option" :aria-selected="item === city" @mousedown.prevent @click="choosePickerOption('city', item)">{{ item }}</button><p v-if="!matchingCities.length" class="picker-empty">没有匹配的城市</p></div>
-          </div>
-        </div>
-        <div class="filter-picker" @focusout="activePicker = ''">
-          <Search class="picker-search-icon" :size="17" aria-hidden="true" />
-          <input v-model="categorySearch" class="picker-input" role="combobox" aria-label="搜索或选择岗位方向" :aria-expanded="activePicker === 'category'" aria-controls="category-picker-options" autocomplete="off" placeholder="搜索方向" @focus="openPicker('category')" @input="updatePickerSearch('category')" @keydown="handlePickerKeydown('category', $event)" />
-          <button class="picker-toggle" type="button" aria-label="展开岗位方向选项" @mousedown.prevent @click="togglePicker('category')"><ChevronDown :size="17" /></button>
-          <div v-if="activePicker === 'category'" id="category-picker-options" class="picker-menu" role="listbox" aria-label="岗位方向匹配选项">
-            <div class="picker-menu-head"><span>{{ matchingCategories.length }} 个匹配方向</span><button type="button" @mousedown.prevent @click="clearPicker('category')">全部</button></div>
-            <div class="picker-options"><button v-for="(item, index) in matchingCategories" :key="item" class="picker-option" :class="{ active: index === activeOptionIndex, selected: item === category }" type="button" role="option" :aria-selected="item === category" @mousedown.prevent @click="choosePickerOption('category', item)">{{ item }}</button><p v-if="!matchingCategories.length" class="picker-empty">没有匹配的岗位方向</p></div>
-          </div>
-        </div>
+        <SearchSelect v-model="city" class="filter-picker" label="搜索或选择城市" placeholder="搜索城市" empty-label="全部城市" :options="cityOptions" />
+        <SearchSelect v-model="category" class="filter-picker" label="搜索或选择岗位方向" placeholder="搜索方向" empty-label="全部方向" :options="categoryOptions" />
         <button class="search-button" type="submit">更新结果</button><button class="reset-button" type="button" @click="reset">重置</button>
       </form>
       <p v-if="message" class="notice">{{ message }}</p>
@@ -314,10 +250,49 @@ onMounted(async () => {
       </div>
     </section>
 
-    <section id="skills" class="signal-zone">
-      <div class="signal-copy"><p class="eyebrow">02 / 技能信号</p><h2>市场正在反复提及<br />这些能力。</h2><p>技能不是孤立的关键词。它们连接着岗位方向、城市机会和你的下一步练习。</p></div>
-      <div class="stat-stack"><div class="stat-panel"><span>城市脉冲</span><ol><li v-for="(item, index) in cityStats.slice(0, 4)" :key="item.dimensionKey"><b>0{{ index + 1 }}</b><strong>{{ item.dimensionKey }}</strong><em>{{ Number(item.metricValue).toLocaleString() }}</em></li></ol></div><div class="skills-cloud"><span>高频技能</span><div><b v-for="item in hotSkills.slice(0, 6)" :key="item.dimensionKey">{{ item.dimensionKey }}</b></div></div></div>
-    </section>
+    </template>
+
+    <template v-else-if="view === 'skills'">
+      <section class="skills-page">
+        <header class="skills-page-banner">
+          <div>
+            <p class="eyebrow">市场技能信号 · 近期公开岗位</p>
+            <h1>把市场语言<br />拆成可行动的技能。</h1>
+            <p>岗位提及次数来自 Spark 清洗后的近期公开岗位。它适合帮助学生校准学习优先级，不代表单项技能即可获得岗位。</p>
+          </div>
+          <div class="skills-highlights" aria-label="技能信号摘要">
+            <div><span>高频技能</span><strong>{{ skillSignals[0]?.name || '暂无' }}</strong></div>
+            <div><span>技能提及</span><strong>{{ skillMentionTotal.toLocaleString() }}</strong></div>
+            <div><span>有效信号</span><strong>{{ skillSignals.length }}</strong></div>
+          </div>
+        </header>
+
+        <div class="skills-analytics">
+          <section class="skills-ranking">
+            <div class="skills-page-head"><div><p class="eyebrow">需求强度</p><h2>市场技能排名</h2></div><span>点击一项查看重点</span></div>
+            <div class="skill-signal-list">
+              <button v-for="skill in skillSignals" :key="skill.name" class="skill-signal" :class="{ selected: focusedSkill?.name === skill.name }" type="button" :aria-pressed="focusedSkill?.name === skill.name" @click="selectedSkill = skill.name">
+                <span class="skill-signal-rank">{{ String(skill.rank).padStart(2, '0') }}</span><strong>{{ skill.name }}</strong><i><b :style="{ width: `${skill.strength}%` }"></b></i><em>{{ skill.mentions.toLocaleString() }}</em>
+              </button>
+            </div>
+          </section>
+
+          <aside class="skill-focus-panel">
+            <p class="eyebrow"><Crosshair :size="14" />当前聚焦</p>
+            <h2>{{ focusedSkill?.name || '暂无技能' }}</h2>
+            <p>将该技能与岗位方向、项目经历一起维护，推荐结果才会更接近你的真实准备度。</p>
+            <div class="focus-metric"><strong>{{ focusedSkill?.mentions?.toLocaleString() || '0' }}</strong><span>岗位提及</span><small>近期公开岗位样本</small></div>
+            <button class="command secondary" type="button" @click="openStudent('profile')"><Sparkles :size="16" />校准我的技能画像</button>
+          </aside>
+        </div>
+
+        <section class="city-demand-section">
+          <div class="skills-page-head"><div><p class="eyebrow">区域机会</p><h2>城市岗位热度</h2></div><span><ChartNoAxesCombined :size="15" />按近期岗位样本排序</span></div>
+          <div class="city-demand-list">
+            <div v-for="(item, index) in cityStats.slice(0, 8)" :key="item.dimensionKey"><b>{{ String(index + 1).padStart(2, '0') }}</b><strong>{{ item.dimensionKey }}</strong><span>{{ Number(item.metricValue).toLocaleString() }} 个岗位</span></div>
+          </div>
+        </section>
+      </section>
     </template>
 
     <StudentWorkspace v-else :api-base="apiBase" :student-id="1" :city-options="cityOptions" :category-options="categoryOptions" :initial-tab="studentTab" @back-to-market="showMarket()" />

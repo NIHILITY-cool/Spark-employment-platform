@@ -27,12 +27,8 @@ const analysis = {
 }
 
 async function mockApi(page) {
-  await page.route('**/api/**', async (route) => {
+  await page.route((url) => url.pathname.startsWith('/api/'), async (route) => {
     const url = route.request().url()
-    if (!new URL(url).pathname.startsWith('/api/')) {
-      await route.continue()
-      return
-    }
     if (url.includes('/university/training-alignment')) {
       const requestUrl = new URL(url)
       await route.fulfill({ json: { ...analysis, city: requestUrl.searchParams.get('city') || '' } })
@@ -59,7 +55,10 @@ test('university training scenario controls update the evidence view', async ({ 
   const updatedCoverage = Number((await coverage.textContent()).replace('%', ''))
   expect(updatedCoverage).toBeGreaterThan(initialCoverage)
 
-  await page.getByLabel('地区范围').selectOption('成都')
+  const cityPicker = page.getByRole('combobox', { name: '地区范围' })
+  await cityPicker.fill('成都')
+  await page.getByRole('option', { name: '成都', exact: true }).click()
+  await expect(cityPicker).toHaveValue('成都')
   await page.getByRole('button', { name: /更新分析/ }).click()
   await expect(page.getByText('地区 × 岗位方向需求矩阵')).toBeVisible()
   await expect(page.locator('.matrix-cell')).toHaveCount(6)
