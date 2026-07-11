@@ -1,0 +1,27 @@
+{
+  "source_name": "国家大学生就业服务平台",
+  "base_url": "https://www.ncss.cn",
+  "list_endpoint": "https://www.ncss.cn/student/jobs/jobslist/ajax/",
+  "detail_url_template": "https://www.ncss.cn/student/jobs/{job_id}/detail.html",
+  "referer": "https://www.ncss.cn/student/jobs/index.html",
+  "default_query": {
+    "jobType": "",
+    "areaCode": "",
+    "jobName": "",
+    "monthPay": "",
+    "industrySectors": "",
+    "property": "",
+    "categoryCode": "",
+    "memberLevel": "",
+    "recruitType": "",
+    "keyUnits": "",
+    "degreeCode": "",
+    "sourcesName": "0",
+    "sourcesType": ""
+  },
+  "max_pages": 5,
+  "page_size": 20,
+  "delay_seconds": 1.0,
+  "timeout_seconds": 20,
+  "fetch_details": true
+}

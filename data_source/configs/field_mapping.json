@@ -1,0 +1,32 @@
+{
+  "raw_job_fields": [
+    "source_job_id",
+    "job_name",
+    "company_name",
+    "city",
+    "district",
+    "industry",
+    "company_size",
+    "company_type",
+    "salary_text",
+    "education_text",
+    "experience_text",
+    "job_description",
+    "job_responsibility",
+    "job_requirement",
+    "publish_time",
+    "source_name",
+    "source_url",
+    "crawl_time"
+  ],
+  "ncss_list_fields": {
+    "source_job_id": "jobId",
+    "job_name": "jobName",
+    "company_name": "recName",
+    "city": "areaCodeName",
+    "company_size": "recScale",
+    "company_type": "recProperty",
+    "education_text": "degreeName",
+    "publish_time": "publishDate"
+  }
+}

@@ -21,6 +21,16 @@ pip install -r requirements.txt
 - 采集日志
 - 数据质量报告
 
+## 已合并的数据源（2026-07-11）
+
+- **国聘**：原始快照位于 `data/raw/guopin/date=2026-07-11/`；采集器为 `crawlers/guopin_job_crawler.py`。
+- **猎聘**：原始快照位于 `data/raw/liepin/date=2026-07-11/`；采集器为 `crawlers/liepin_job_crawler.py`。
+- **国家大学生就业服务平台（ncss）**：原始合并快照位于 `data/raw/ncss_jobs/date=2026-07-11/run=20260711_160114_merged/`；通用爬虫、解析器和校验脚本已分别归入 `crawlers/`、`parsers/`、`scripts/`。
+
+原始数据目录被 `.gitignore` 排除，便于本地与 HDFS 使用而不会误提交大文件。ncss 的采集台账与字段说明见 `../docs/data-source/ncss/`。
+
+采集器不会携带会话信息。若公开接口在合法访问边界内要求本机会话，只能通过本地环境变量提供，且不得提交：`GUOPIN_API_AUTH`、`LIEPIN_COOKIE`、`LIEPIN_XSRF_TOKEN`。
+
 ## 运行命令
 
 ```bash

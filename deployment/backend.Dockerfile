@@ -1,7 +1,12 @@
-# Backend Dockerfile
-FROM python:3.11-slim
+FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
-COPY backend/requirements.txt .
-RUN pip install -r requirements.txt
-COPY backend/ .
-CMD ["python", "run.py"]
+COPY backend/pom.xml .
+RUN mvn dependency:go-offline
+COPY backend/src ./src
+RUN mvn package -DskipTests
+
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8082
+CMD ["java", "-jar", "app.jar"]

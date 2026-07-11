@@ -27,6 +27,7 @@ dist/
 # IDE
 .vscode/
 .idea/
+.codex/
 *.swp
 *.swo
 *~
@@ -39,6 +40,7 @@ spark-logs/
 # 大型数据文件
 *.parquet
 *.orc
+*.db
 data_source/data/
 *.csv
 !data_processing/dictionaries/*.csv

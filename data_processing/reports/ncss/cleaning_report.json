@@ -1,0 +1,223 @@
+{
+  "input_file": "data_source\\data\\raw\\ncss_jobs\\date=2026-07-11\\run=20260711_160114_merged\\jobs_ncss_2026-07-11_merged.jsonl",
+  "generated_at": "2026-07-11T16:32:37",
+  "input_record_count": 10834,
+  "cleaned_record_count": 10809,
+  "excluded_record_count": 25,
+  "unique_job_id_count": 10809,
+  "exclusion_reasons": {
+    "hard_experience_requirement": 22,
+    "social_recruitment_without_student_hint": 3
+  },
+  "salary_parse_status": {
+    "range": 10834
+  },
+  "missing_fields_after_cleaning": {
+    "job_id": 0,
+    "job_name": 0,
+    "job_category": 10809,
+    "company_name": 0,
+    "industry": 14,
+    "company_scale": 85,
+    "city": 0,
+    "district": 10809,
+    "education": 0,
+    "experience": 10809,
+    "salary_raw": 0,
+    "salary_min": 0,
+    "salary_max": 0,
+    "job_description": 39,
+    "job_url": 0,
+    "crawl_date": 0
+  },
+  "top_cities": [
+    [
+      "广东",
+      1255
+    ],
+    [
+      "浙江",
+      1109
+    ],
+    [
+      "江苏",
+      1019
+    ],
+    [
+      "上海",
+      745
+    ],
+    [
+      "山东",
+      730
+    ],
+    [
+      "北京",
+      722
+    ],
+    [
+      "四川",
+      705
+    ],
+    [
+      "河南",
+      459
+    ],
+    [
+      "河北",
+      386
+    ],
+    [
+      "安徽",
+      380
+    ],
+    [
+      "湖北",
+      376
+    ],
+    [
+      "福建",
+      335
+    ],
+    [
+      "天津",
+      322
+    ],
+    [
+      "湖南",
+      301
+    ],
+    [
+      "辽宁",
+      211
+    ],
+    [
+      "陕西",
+      197
+    ],
+    [
+      "江西",
+      193
+    ],
+    [
+      "云南",
+      186
+    ],
+    [
+      "重庆",
+      177
+    ],
+    [
+      "广西",
+      163
+    ]
+  ],
+  "top_industries": [
+    [
+      "教育/培训/院校",
+      1045
+    ],
+    [
+      "机械制造/机电/重工",
+      1027
+    ],
+    [
+      "计算机软件",
+      645
+    ],
+    [
+      "互联网/电子商务",
+      635
+    ],
+    [
+      "房地产/建筑/建材/工程",
+      462
+    ],
+    [
+      "石油/石化/化工",
+      421
+    ],
+    [
+      "电子技术/半导体/集成电路",
+      406
+    ],
+    [
+      "专业服务（财会/法律/翻译/人力资源等）",
+      374
+    ],
+    [
+      "酒店/餐饮",
+      358
+    ],
+    [
+      "仪器/仪表/工业自动化/电气",
+      316
+    ],
+    [
+      "计算机服务（系统/数据/维护/安全）",
+      308
+    ],
+    [
+      "贸易/进出口",
+      265
+    ],
+    [
+      "汽车/摩托车（制造/维护/配件/销售/服务）",
+      241
+    ],
+    [
+      "快速消费品（食品/饮料/日化/烟酒）",
+      235
+    ],
+    [
+      "制药/生物工程",
+      233
+    ],
+    [
+      "原材料及加工（金属/木材/橡胶/塑料/玻璃/陶瓷/建材）",
+      231
+    ],
+    [
+      "投资/基金/证券/期货",
+      230
+    ],
+    [
+      "批发/零售",
+      221
+    ],
+    [
+      "媒体/出版/影视/文化传播",
+      212
+    ],
+    [
+      "农/林/牧/渔",
+      211
+    ]
+  ],
+  "top_education": [
+    [
+      "专科及以上",
+      4651
+    ],
+    [
+      "本科及以上",
+      4194
+    ],
+    [
+      "不限",
+      1193
+    ],
+    [
+      "硕士及以上",
+      614
+    ],
+    [
+      "博士及以上",
+      157
+    ]
+  ],
+  "output_jsonl": "data_processing\\data\\cleaned\\ncss_jobs\\date=2026-07-11\\run=20260711_163237\\cleaned_jobs_ncss_2026-07-11.jsonl",
+  "output_csv": "data_processing\\data\\cleaned\\ncss_jobs\\date=2026-07-11\\run=20260711_163237\\cleaned_jobs_ncss_2026-07-11.csv",
+  "excluded_jsonl": "data_processing\\data\\cleaned\\ncss_jobs\\date=2026-07-11\\run=20260711_163237\\excluded_jobs_ncss_2026-07-11.jsonl",
+  "excluded_csv": "data_processing\\data\\cleaned\\ncss_jobs\\date=2026-07-11\\run=20260711_163237\\excluded_jobs_ncss_2026-07-11.csv"
+}

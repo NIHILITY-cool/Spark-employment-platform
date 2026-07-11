@@ -1,0 +1,26 @@
+# 进度日志
+
+## 2026-07-11
+- 同步 plan.md 更新：后端从 Flask 切换为 Spring Boot
+- 新增 infrastructure 的 spark/mysql/redis 子目录
+- 新增 Redis 缓存设计文档
+- 更新前后端目录结构
+- 合并国聘、猎聘、ncss 三站采集代码、原始数据、清洗结果与质量报告；移除代码中的会话凭据。
+- 在虚拟机启动 HDFS、YARN 与 Spark Standalone；HDFS 已创建 Raw、Cleaned、Warehouse、Output、Archive 分层目录。
+- 三站原始 CSV 已上传至 HDFS Raw：国聘 531 KB、猎聘 1.7 MB、ncss 20.9 MB。
+- 新增并验证 PySpark 清洗与市场统计任务：Cleaned/DWD 统一岗位表共 11,559 条（国聘 297、猎聘 752、ncss 10,510），市场统计已写入 HDFS Output。
+- 新增岗位类别、技能与别名字典，并在 Spark 上完成岗位分类与技能提取；岗位画像写入 `warehouse/dwd/job_profiles/date=2026-07-11`，岗位技能明细写入 `cleaned/job_skills/date=2026-07-11`，热门技能与类别统计写入 HDFS Output。
+- 虚拟机已安装并启动 MySQL 8.0；创建 `spark_employment` 数据库、`job`、`job_skill`、`market_statistic` 表及仅本机可读的应用连接配置。
+- 新增并验证 Spark JDBC 导出：MySQL 当前包含岗位 11,559 条、岗位技能 2,647 条、市场统计 431 条；JDBC 驱动由 Spark 提交时加载，连接配置未提交仓库。
+- 本机已初始化并启动 Vue 3 + Vite 前端（`http://localhost:5173/`）；岗位市场页支持真实 API 读取与后端未启动时的明确演示数据回退，生产构建已通过。
+- 完善 Spring Boot 后端：实现统一异常响应、健康检查、岗位筛选/详情/筛选项、市场统计总览、学生画像/技能/就业期望，以及基于岗位技能的实时 Top10 推荐和技能差距接口；学生演示链路已完成端到端验证。
+- 后端已在虚拟机 Java 17 下打包并启动，监听 `http://192.168.64.2:8082`（8080 由 Spark Master UI 占用）；本机前端已切换到 8082，跨域与真实岗位/市场数据访问均已验证。
+- 修复本机前端岗位筛选：城市与岗位方向不再从当前页或写死列表读取，改为调用 `/api/jobs/filters` 获取所有有效岗位的筛选项；前端构建已通过。
+- 将城市与岗位方向改为标准可搜索选择框：左侧输入实时过滤匹配项，右侧箭头独立控制展开/收起；候选面板固定为约 5 条可见项高度，超出内容在面板内滚动，支持鼠标与上下键/回车选择；前端构建已通过。
+- MySQL 已新增 `student`、`student_skill`、`job_preference` 三张业务表；保留一条 `demo001` 演示学生画像及 Python、SQL、Spark 技能，用于接口演示。
+- Spark 提交须使用 `spark://192.168.64.2:7077`；`hwadee01` 当前解析到回环地址。
+- 统一城市字段展示口径：ETL、后端与前端均移除城市名称末尾的“市”，无法细分的“中国”统一为“全国”，并同步修正 MySQL 岗位及城市统计存量数据。
+- 修正 Docker Compose、Nginx 与 Spring Boot 之间的端口和 MySQL 连接变量不一致问题。
+
+## 2026-07-10
+- 初始化项目目录结构
