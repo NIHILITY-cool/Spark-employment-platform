@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { ArrowDown, ArrowRight, Building2, ChevronDown, Clock3, GraduationCap, Heart, MapPin, Search, UserRound } from '@lucide/vue'
+import { ArrowDown, ArrowRight, ChevronDown, Clock3, GraduationCap, Heart, MapPin, Search, UserRound } from '@lucide/vue'
+import RoleLanding from './components/RoleLanding.vue'
 import StudentWorkspace from './components/StudentWorkspace.vue'
 import UniversityWorkspace from './components/UniversityWorkspace.vue'
 
@@ -21,7 +22,7 @@ const activePicker = ref('')
 const citySearch = ref('')
 const categorySearch = ref('')
 const activeOptionIndex = ref(-1)
-const view = ref('market')
+const view = ref('landing')
 const studentTab = ref('profile')
 const favorites = ref(new Set(JSON.parse(localStorage.getItem('favoriteJobs') || '[]')))
 
@@ -200,6 +201,20 @@ function openStudent(tab = 'profile') {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+function enterStudent() {
+  showMarket()
+}
+
+function enterUniversity() {
+  view.value = 'university'
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function showPortal() {
+  view.value = 'landing'
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 function showMarket(anchor = '') {
   view.value = 'market'
   nextTick(() => {
@@ -222,7 +237,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="shell">
+  <main class="shell" :class="{ 'portal-shell': view === 'landing' }">
+    <RoleLanding v-if="view === 'landing'" :job-count="headlineTotal" @select-student="enterStudent" @select-university="enterUniversity" />
+
+    <UniversityWorkspace v-else-if="view === 'university'" :api-base="apiBase" :city-options="cityOptions" @back-to-portal="showPortal" />
+
+    <template v-else>
     <header class="topbar">
       <button class="brand" type="button" @click="showMarket()">
         <span class="brand-mark"><i></i><i></i><i></i></span>
@@ -232,11 +252,10 @@ onMounted(async () => {
         <button :class="{ active: view === 'market' }" type="button" @click="showMarket('#jobs')">岗位市场</button>
         <button type="button" @click="showMarket('#skills')">技能信号</button>
         <button :class="{ active: view === 'student' }" type="button" @click="openStudent('profile')">我的画像</button>
-        <button :class="{ active: view === 'university' }" type="button" @click="view = 'university'">高校参考</button>
       </nav>
       <div class="top-actions">
-        <button class="university-button" type="button" title="高校培养参考" @click="view = 'university'"><Building2 :size="15" /><span>高校端</span></button>
-        <button class="profile-button" type="button" @click="openStudent('recommendations')"><UserRound :size="15" />学生入口<ArrowRight :size="15" /></button>
+        <button class="university-button" type="button" title="返回身份选择" @click="showPortal"><span>切换身份</span></button>
+        <button class="profile-button" type="button" @click="openStudent('recommendations')"><UserRound :size="15" />我的工作台<ArrowRight :size="15" /></button>
       </div>
     </header>
 
@@ -301,7 +320,7 @@ onMounted(async () => {
     </section>
     </template>
 
-    <StudentWorkspace v-else-if="view === 'student'" :api-base="apiBase" :student-id="1" :city-options="cityOptions" :category-options="categoryOptions" :initial-tab="studentTab" @back-to-market="showMarket()" />
-    <UniversityWorkspace v-else :api-base="apiBase" :city-options="cityOptions" @back-to-market="showMarket()" />
+    <StudentWorkspace v-else :api-base="apiBase" :student-id="1" :city-options="cityOptions" :category-options="categoryOptions" :initial-tab="studentTab" @back-to-market="showMarket()" />
+    </template>
   </main>
 </template>

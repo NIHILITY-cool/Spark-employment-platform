@@ -6,7 +6,7 @@ test('university workspace renders the live Spark/MySQL aggregation', async ({ p
   await page.goto('/')
   const responsePromise = page.waitForResponse((response) =>
     response.url().includes('/api/university/training-alignment') && response.status() === 200)
-  await page.getByTitle('高校培养参考').click()
+  await page.getByRole('button', { name: '进入高校端' }).click()
   const response = await responsePromise
   const payload = await response.json()
 

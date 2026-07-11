@@ -49,7 +49,7 @@ async function mockApi(page) {
 test('university training scenario controls update the evidence view', async ({ page }) => {
   await mockApi(page)
   await page.goto('/')
-  await page.getByTitle('高校培养参考').click()
+  await page.getByRole('button', { name: '进入高校端' }).click()
   await expect(page.getByRole('heading', { name: '从市场需求反推训练重点。' })).toBeVisible()
   await expect(page.getByText('286')).toBeVisible()
 
@@ -72,7 +72,7 @@ test('university evidence view is contained on mobile', async ({ page }) => {
   await mockApi(page)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  await page.getByTitle('高校培养参考').click()
+  await page.getByRole('button', { name: '进入高校端' }).click()
   await expect(page.getByText('计划强化技能组合')).toBeVisible()
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)

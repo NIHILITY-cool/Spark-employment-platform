@@ -22,7 +22,7 @@ const props = defineProps({
   apiBase: { type: String, required: true },
   cityOptions: { type: Array, default: () => [] },
 })
-const emit = defineEmits(['back-to-market'])
+const emit = defineEmits(['back-to-portal'])
 
 const loading = ref(true)
 const error = ref('')
@@ -111,7 +111,7 @@ onMounted(() => loadAnalysis(true))
 <template>
   <section class="university-workspace">
     <header class="university-banner">
-      <button class="icon-command" type="button" title="返回岗位市场" @click="emit('back-to-market')"><ArrowLeft :size="18" /></button>
+      <button class="icon-command" type="button" title="返回身份选择" @click="emit('back-to-portal')"><ArrowLeft :size="18" /></button>
       <div>
         <p class="eyebrow">高校培养参考 · 公开岗位证据</p>
         <h1>从市场需求反推训练重点。</h1>

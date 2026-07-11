@@ -1,0 +1,31 @@
+.role-landing{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto;background:#eef4f2;color:#143a4c}
+.role-landing-header{display:flex;align-items:center;gap:10px;min-height:76px;padding:0 6%;border-bottom:1px solid #d4dfdc;background:#fff;color:#153d50;font-size:17px;font-weight:800}
+.role-landing-header small{margin-left:auto;color:#68817c;font:500 10px "DM Mono",monospace;letter-spacing:0}
+.role-landing-body{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(480px,1.1fr);gap:clamp(36px,7vw,120px);align-items:center;max-width:1240px;width:100%;margin:0 auto;padding:64px 6%}
+.role-landing-intro{max-width:475px}
+.role-landing-intro h1{margin:13px 0 18px;color:#0b2f50;font-size:clamp(38px,4.4vw,62px);line-height:1.06;letter-spacing:0}
+.role-landing-intro p:last-child{max-width:405px;margin:0;color:#58737b;font-size:14px;line-height:1.75}
+.role-cards{display:grid;gap:12px}
+.role-card{position:relative;display:grid;grid-template-columns:58px minmax(0,1fr) 28px;gap:17px;align-items:center;min-height:143px;padding:24px 26px;border:1px solid #bdcfca;border-radius:6px;background:#fff;color:#163e50;text-align:left;cursor:pointer;transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+.role-card:hover{transform:translateY(-3px);box-shadow:0 14px 28px rgba(21,61,80,.12)}
+.role-card:focus-visible{outline:3px solid #c4df74;outline-offset:3px}
+.role-card-icon{width:56px;height:56px;display:grid;place-items:center;border:1px solid currentColor}
+.student-role{color:#287564}
+.student-role:hover{border-color:#287564}
+.university-role{color:#285777}
+.university-role:hover{border-color:#285777}
+.role-card-copy{display:grid;gap:5px;min-width:0}
+.role-card-label{font:600 10px "DM Mono",monospace;letter-spacing:0;color:currentColor}
+.role-card-copy strong{color:#173e50;font-size:21px;line-height:1.22;letter-spacing:0}
+.role-card-copy small{color:#71837f;font-size:12px;line-height:1.5}
+.role-card-arrow{justify-self:end;color:currentColor;transition:transform .2s ease}
+.role-card:hover .role-card-arrow{transform:translateX(4px)}
+.role-landing-evidence{display:grid;grid-template-columns:repeat(3,1fr);margin:0 6%;border-top:1px solid #ccdad5;background:#e1ebe7}
+.role-landing-evidence>div{min-height:74px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:2px 9px;align-content:center;padding:12px 18px;border-right:1px solid #ccdad5}
+.role-landing-evidence>div:last-child{border-right:0}
+.role-landing-evidence svg{grid-row:1/3;color:#3d806d}
+.role-landing-evidence span{color:#6c817c;font-size:10px}
+.role-landing-evidence strong{color:#1e4555;font:700 14px "DM Mono",monospace}
+@media(max-width:800px){.role-landing-body{grid-template-columns:1fr;gap:36px;padding-top:48px;padding-bottom:48px}.role-landing-intro{max-width:540px}.role-landing-evidence{margin:0;grid-template-columns:1fr}.role-landing-evidence>div{min-height:58px;padding-left:7%;padding-right:7%;border-right:0;border-top:1px solid #ccdad5}.role-landing-evidence>div:first-child{border-top:0}}
+@media(max-width:520px){.role-landing-header{padding-left:7%;padding-right:7%;min-height:64px}.role-landing-header small{display:none}.role-landing-body{padding-left:7%;padding-right:7%}.role-landing-intro h1{font-size:37px}.role-card{grid-template-columns:46px minmax(0,1fr) 18px;gap:13px;min-height:124px;padding:18px 15px}.role-card-icon{width:45px;height:45px}.role-card-copy strong{font-size:17px}.role-card-copy small{font-size:11px}.role-card-arrow{width:18px}}
+@media(prefers-reduced-motion:reduce){.role-card,.role-card-arrow{transition:none}}

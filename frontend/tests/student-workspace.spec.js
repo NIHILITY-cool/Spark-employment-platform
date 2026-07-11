@@ -2,13 +2,15 @@ import { expect, test } from '@playwright/test'
 
 test('student profile and recommendation workflow is interactive', async ({ page }) => {
   await page.goto('/')
+  await expect(page.getByRole('heading', { name: /从你的视角/ })).toBeVisible()
+  await page.getByRole('button', { name: '进入学生端' }).click()
   await expect(page.getByRole('heading', { name: /找到下一份/ })).toBeVisible()
 
   const favorite = page.getByRole('button', { name: '收藏岗位' }).first()
   await favorite.click()
   await expect(favorite).toHaveAttribute('aria-pressed', 'true')
 
-  await page.getByRole('button', { name: /学生入口/ }).click()
+  await page.getByRole('button', { name: /我的工作台/ }).click()
   await expect(page.getByRole('heading', { name: /把目标变成下一步行动/ })).toBeVisible()
   await expect(page.getByText('Python', { exact: true }).first()).toBeVisible()
   await page.getByRole('tab', { name: /画像与期望/ }).click()
@@ -29,7 +31,8 @@ test('student profile and recommendation workflow is interactive', async ({ page
 test('student workspace remains usable on a mobile viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  await page.getByRole('button', { name: /学生入口/ }).click()
+  await page.getByRole('button', { name: '进入学生端' }).click()
+  await page.getByRole('button', { name: /我的工作台/ }).click()
   await expect(page.getByRole('heading', { name: /把目标变成下一步行动/ })).toBeVisible()
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
