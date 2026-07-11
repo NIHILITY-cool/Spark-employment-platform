@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
 
 from pyspark.sql import DataFrame, SparkSession, functions as F
 from pyspark.sql.types import StringType, StructField, StructType
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from location_normalization import parse_zhilian_monthly_salary, resolve_city
 
 
 HDFS_ROOT = "/employment-platform"
@@ -14,12 +19,29 @@ GUOPIN_COLUMNS = [
     "location", "education", "experience", "salary_min", "salary_max",
     "job_description", "job_url", "crawl_date",
 ]
+ZHILIAN_COLUMNS = [
+    "job_name", "company_name", "industry", "company_scale", "location_detail", "city", "district",
+    "education", "experience", "salary_raw", "job_description", "job_url", "company_url",
+]
 STANDARD_COLUMNS = [
     "job_key", "job_id", "job_name", "job_category", "company_name", "industry",
     "company_scale", "city", "district", "education", "experience", "salary_raw",
     "salary_min", "salary_max", "job_description", "job_url", "crawl_date", "source",
     "job_status", "last_seen_date", "record_hash",
 ]
+LOCATION_RESULT_SCHEMA = StructType([
+    StructField("city", StringType(), False),
+    StructField("granularity", StringType(), False),
+])
+SALARY_RESULT_SCHEMA = StructType([
+    StructField("salary_min", StringType(), True),
+    StructField("salary_max", StringType(), True),
+])
+resolve_location_udf = F.udf(resolve_city, LOCATION_RESULT_SCHEMA)
+parse_zhilian_salary_udf = F.udf(
+    lambda value: tuple(str(item) if item is not None else None for item in parse_zhilian_monthly_salary(value)),
+    SALARY_RESULT_SCHEMA,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -51,8 +73,9 @@ def normalize_common(frame: DataFrame, source: str, date: str) -> DataFrame:
         frame = frame.withColumn(column, cleaned_text(column))
 
     frame = (
-        frame.withColumn("city", F.regexp_replace(F.col("city"), "市+$", ""))
-        .withColumn("city", F.when(F.col("city") == "中国", F.lit("全国")).otherwise(F.col("city")))
+        frame.withColumn("_location", resolve_location_udf(F.col("city"), F.col("district"), F.col("job_description")))
+        .withColumn("city", F.col("_location.city"))
+        .drop("_location")
         .withColumn("education", F.when(F.col("education") == "统招本科", F.lit("本科")).otherwise(F.col("education")))
         .withColumn("experience", F.when(F.col("experience") == "", F.lit("经验不限")).otherwise(F.col("experience")))
         .withColumn("salary_min", F.expr("try_cast(salary_min AS DOUBLE)").cast("long"))
@@ -130,12 +153,30 @@ def read_ncss(spark: SparkSession, root: str, date: str) -> DataFrame:
     return normalize_common(frame, "ncss", date)
 
 
+def read_zhilian(spark: SparkSession, root: str, date: str) -> DataFrame:
+    schema = StructType([StructField(name, StringType(), True) for name in ZHILIAN_COLUMNS])
+    raw = read_csv(spark, f"{root}/raw/jobs/source=zhilian/date={date}", header=False, schema=schema)
+    frame = raw.select(
+        F.sha2(cleaned_text("job_url"), 256).alias("job_id"), "job_name", F.lit("").alias("job_category"),
+        "company_name", "industry", "company_scale", "city", "district", "education", "experience",
+        "salary_raw", F.lit(None).cast("long").alias("salary_min"), F.lit(None).cast("long").alias("salary_max"),
+        "job_description", "job_url",
+    ).withColumn("_salary", parse_zhilian_salary_udf(F.col("salary_raw")))
+    frame = frame.withColumn("salary_min", F.col("_salary.salary_min").cast("long")) \
+        .withColumn("salary_max", F.col("_salary.salary_max").cast("long")).drop("_salary")
+    return normalize_common(frame, "zhilian", date)
+
+
 def main() -> None:
     args = parse_args()
     spark = SparkSession.builder.appName("employment-job-cleaning").getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
+    spark.sparkContext.addPyFile(str(Path(__file__).resolve().parents[1] / "location_normalization.py"))
 
-    jobs = read_guopin(spark, args.hdfs_root, args.date).unionByName(read_liepin(spark, args.hdfs_root, args.date)).unionByName(read_ncss(spark, args.hdfs_root, args.date))
+    jobs = read_guopin(spark, args.hdfs_root, args.date) \
+        .unionByName(read_liepin(spark, args.hdfs_root, args.date)) \
+        .unionByName(read_ncss(spark, args.hdfs_root, args.date)) \
+        .unionByName(read_zhilian(spark, args.hdfs_root, args.date))
     jobs = jobs.dropDuplicates(["source", "job_id"]).dropDuplicates(["source", "job_name", "company_name", "city", "salary_min", "salary_max"])
     jobs = jobs.withColumn("job_key", F.concat_ws(":", F.col("source"), F.col("job_id")))
     jobs = jobs.withColumn("record_hash", F.sha2(F.concat_ws("||", *[F.col(column).cast("string") for column in STANDARD_COLUMNS[:-1]]), 256))

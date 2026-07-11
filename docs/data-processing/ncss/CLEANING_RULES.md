@@ -46,7 +46,7 @@ crawl_date
 | `company_name` | `company_name` | 直接保留 |
 | `industry` | `industry` | 直接保留 |
 | `company_scale` | `company_size` | 改名 |
-| `city` | `city` | 拆分城市和区域，移除末尾的“市”，并将无法细分的“中国”统一为“全国” |
+| `city` | `city` | 拆分城市和区域，移除末尾的“市”。若原始值仅为省级地区，则从区域或“工作地点”等详情文本中提取有明确证据的城市；不把省份臆测为省会城市。无法细分的“中国”统一为“全国”。 |
 | `district` | `district` | 直接保留；如 `city` 中含 `-` 且本字段为空，则拆出区域 |
 | `education` | `education_text` | 改名 |
 | `experience` | `experience_text` | 改名；当前 ncss 合并总表该字段基本为空 |
@@ -117,6 +117,8 @@ data_processing/data/cleaned/ncss_jobs/date=YYYY-MM-DD/run=YYYYMMDD_HHMMSS/
 ```
 
 ## 后续待做
+
+- 省级粒度岗位保留在原始岗位链路中，但不进入城市筛选、城市统计和高校区域矩阵；待取得真实城市字段后再纳入城市分析。
 
 - `job_category` 后续通过岗位名称和描述自动分类。
 - 技能提取后续单独输出 `job_skill` 表。

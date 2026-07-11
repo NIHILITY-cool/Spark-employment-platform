@@ -1,5 +1,6 @@
 package com.employment.service;
 
+import com.employment.common.LocationScope;
 import com.employment.dto.DemandMetric;
 import com.employment.dto.RegionalDemandCell;
 import com.employment.dto.TrainingAlignmentResponse;
@@ -31,7 +32,8 @@ public class UniversityAnalysisService {
         String category = MAJOR_CATEGORIES.get(major);
         String city = normalizeCity(requestedCity);
         MapSqlParameterSource parameters = new MapSqlParameterSource()
-                .addValue("category", category).addValue("city", city);
+                .addValue("category", category).addValue("city", city)
+                .addValue("provinceLevelLocations", LocationScope.provinceLevelLocations());
         String filter = " WHERE j.job_status = 'active' AND j.job_category = :category "
                 + (StringUtils.hasText(city) ? " AND j.city = :city " : "");
 
@@ -60,6 +62,7 @@ public class UniversityAnalysisService {
                        ROUND(AVG(j.salary_min), 0) AS average_salary_min,
                        ROUND(AVG(j.salary_max), 0) AS average_salary_max
                 FROM job j WHERE j.job_status = 'active' AND j.job_category = :category
+                  AND j.city NOT IN (:provinceLevelLocations)
                 GROUP BY j.city ORDER BY job_count DESC, dimension_key LIMIT 10
                 """, parameters);
         List<DemandMetric> industries = metrics("""
@@ -77,6 +80,7 @@ public class UniversityAnalysisService {
         List<RegionalDemandCell> matrix = jdbc.query("""
                 WITH top_cities AS (
                     SELECT city FROM job WHERE job_status = 'active' AND city <> ''
+                      AND city NOT IN (:provinceLevelLocations)
                     GROUP BY city ORDER BY COUNT(*) DESC LIMIT 6
                 ), top_categories AS (
                     SELECT job_category FROM job

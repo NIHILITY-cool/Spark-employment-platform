@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
 
 from pyspark.sql import SparkSession, functions as F
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from location_normalization import PROVINCE_LEVEL_LOCATIONS
 
 
 def parse_args() -> argparse.Namespace:
@@ -25,8 +30,9 @@ def main() -> None:
     spark.sparkContext.setLogLevel("WARN")
     jobs = spark.read.parquet(f"{args.hdfs_root}/warehouse/dwd/jobs/date={args.date}")
     output_root = f"{args.hdfs_root}/output/job_statistics/date={args.date}"
+    city_jobs = jobs.filter(~F.col("city").isin(*PROVINCE_LEVEL_LOCATIONS))
 
-    write_stat(jobs.groupBy("city").agg(F.count("*").alias("job_count")).orderBy(F.desc("job_count")), f"{output_root}/city_distribution", args.mode)
+    write_stat(city_jobs.groupBy("city").agg(F.count("*").alias("job_count")).orderBy(F.desc("job_count")), f"{output_root}/city_distribution", args.mode)
     write_stat(jobs.groupBy("industry").agg(F.count("*").alias("job_count")).orderBy(F.desc("job_count")), f"{output_root}/industry_distribution", args.mode)
     write_stat(jobs.groupBy("education").agg(F.count("*").alias("job_count")).orderBy(F.desc("job_count")), f"{output_root}/education_distribution", args.mode)
     write_stat(jobs.groupBy("experience").agg(F.count("*").alias("job_count")).orderBy(F.desc("job_count")), f"{output_root}/experience_distribution", args.mode)

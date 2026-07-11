@@ -7,7 +7,7 @@ def test_city_suffix_is_removed() -> None:
 
 
 def test_non_suffix_city_text_is_preserved() -> None:
-    assert split_location("山东省莱芜市", "") == ("山东省莱芜", "")
+    assert split_location("山东省莱芜市", "") == ("莱芜", "")
     assert split_location("北京", "海淀区") == ("北京", "海淀区")
 
 

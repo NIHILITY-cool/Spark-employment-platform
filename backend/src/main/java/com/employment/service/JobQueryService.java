@@ -2,6 +2,7 @@ package com.employment.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.employment.common.LocationScope;
 import com.employment.dto.JobFilterOptions;
 import com.employment.entity.Job;
 import com.employment.entity.JobSkill;
@@ -60,7 +61,7 @@ public class JobQueryService {
     public JobFilterOptions filters() {
         List<String> cities = jobMapper.selectObjs(new QueryWrapper<Job>().select("DISTINCT city")
                         .eq("job_status", "active").ne("city", "").orderByAsc("city"))
-                .stream().map(String::valueOf).toList();
+                .stream().map(String::valueOf).filter(LocationScope::isCity).toList();
         List<String> categories = jobMapper.selectObjs(new QueryWrapper<Job>().select("DISTINCT job_category")
                         .eq("job_status", "active").ne("job_category", "").orderByAsc("job_category"))
                 .stream().map(String::valueOf).toList();

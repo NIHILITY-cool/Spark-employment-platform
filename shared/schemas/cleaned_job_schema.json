@@ -47,7 +47,7 @@
     },
     "city": {
       "type": "string",
-      "description": "工作城市或省级地区。"
+      "description": "经验证的工作城市；无法细分的省级地点不参与城市维度统计。"
     },
     "district": {
       "type": "string",

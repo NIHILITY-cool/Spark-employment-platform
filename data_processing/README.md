@@ -61,6 +61,14 @@ spark-submit spark_jobs/export_results.py
 
 HDFS Raw 数据按 `source=guopin|liepin|ncss/date=YYYY-MM-DD` 分区存放。首次处理已在 2026-07-11 数据上验证，输出分别写入 HDFS 的 Cleaned、DWD 与 Output 层。
 
+智联招聘快照作为第四个来源，使用 `source=zhilian/date=2026-07-11` 分区。首次接入或重算该日期前，先上传本地快照：
+
+```bash
+hdfs dfs -mkdir -p /employment-platform/raw/jobs/source=zhilian/date=2026-07-11
+hdfs dfs -put -f ../data_source/data/raw/zhilian/date=2026-07-11/jobs_zhilian_2026-07-11.csv \
+  /employment-platform/raw/jobs/source=zhilian/date=2026-07-11/
+```
+
 ```bash
 export HADOOP_CONF_DIR="$HOME/opt/hadoop-3.5.0/etc/hadoop"
 export HADOOP_HOME="$HOME/opt/hadoop-3.5.0"
@@ -88,7 +96,7 @@ $SPARK_HOME/bin/spark-submit \
   spark_jobs/skill_extraction.py --date 2026-07-11
 ```
 
-若某一日期分区需要整体重算，显式追加 `--mode overwrite`；不要直接删除 HDFS 原始数据。
+若某一日期分区需要整体重算，显式追加 `--mode overwrite`；不要直接删除 HDFS 原始数据。城市口径变更或新增数据源时，依次重跑清洗、市场统计、技能提取和 MySQL 导出，确保前端与数据库使用同一快照。
 
 ## 测试方法
 

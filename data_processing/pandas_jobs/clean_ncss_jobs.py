@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import re
+import sys
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,8 @@ from typing import Any
 
 DATA_PROCESSING_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = DATA_PROCESSING_ROOT.parent
+sys.path.insert(0, str(DATA_PROCESSING_ROOT))
+from location_normalization import normalize_city_name, resolve_city
 DEFAULT_INPUT = (
     PROJECT_ROOT
     / "data_source"
@@ -141,19 +144,18 @@ def save_csv(path: Path, records: list[dict[str, Any]], fields: list[str]) -> No
 
 
 def normalize_city(value: str) -> str:
-    city = re.sub(r"市+$", "", clean_text(value))
-    return "全国" if city == "中国" else city
+    return normalize_city_name(value)
 
 
 def split_location(city_value: str, district_value: str) -> tuple[str, str]:
     city = clean_text(city_value)
     district = clean_text(district_value)
     if district or not LOCATION_SPLIT_RE.search(city):
-        return normalize_city(city), district
+        return resolve_city(city, district)[0], district
     parts = [part.strip() for part in LOCATION_SPLIT_RE.split(city, maxsplit=1)]
     if len(parts) == 2:
-        return normalize_city(parts[0]), parts[1]
-    return normalize_city(city), district
+        return resolve_city(parts[0], parts[1])[0], parts[1]
+    return resolve_city(city, district)[0], district
 
 
 def to_yuan(value: str) -> int:
