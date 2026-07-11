@@ -23,6 +23,8 @@ env/
 node_modules/
 dist/
 .output/
+frontend/test-results/
+frontend/playwright-report/
 
 # IDE
 .vscode/

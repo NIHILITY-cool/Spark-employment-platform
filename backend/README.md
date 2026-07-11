@@ -68,6 +68,8 @@ mysql -u root -p < ../database/schema.sql
 
 推荐首版从 MySQL 中筛选至多 300 个有效候选岗位，综合技能、经历要求、期望岗位方向、学历、城市和薪资区间进行计算；岗位技能证据不足 3 个时会折减技能分。结果实时计算，不写回正式表。
 
+推荐响应返回 `skillScore`、`experienceScore`、`directionScore`、`educationScore`、`cityScore` 和 `salaryScore` 六个维度，前端据此展示可解释的匹配轨道。
+
 认证、项目/实习经历和高校聚合接口依赖尚未采集的学生业务数据，暂不对外宣称已实现，后续应在对应数据表与批处理结果准备后再接入。
 
 ## 测试方法
