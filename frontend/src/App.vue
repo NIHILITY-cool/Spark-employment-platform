@@ -1,12 +1,13 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
-import { ArrowDown, ArrowRight, ChartNoAxesCombined, Clock3, Crosshair, GraduationCap, Heart, MapPin, Search, Sparkles, UserRound } from '@lucide/vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { ArrowDown, ArrowRight, ChartNoAxesCombined, ChevronLeft, ChevronRight, Clock3, Crosshair, GraduationCap, Heart, Home, MapPin, Search, Sparkles, UserRound } from '@lucide/vue'
 import RoleLanding from './components/RoleLanding.vue'
 import SearchSelect from './components/SearchSelect.vue'
 import StudentWorkspace from './components/StudentWorkspace.vue'
 import UniversityWorkspace from './components/UniversityWorkspace.vue'
+import JobDetailDrawer from './components/JobDetailDrawer.vue'
 
-const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://192.168.64.2:8082/api'
+const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
 const loading = ref(false)
 const usingDemo = ref(false)
 const message = ref('')
@@ -15,6 +16,7 @@ const city = ref('')
 const category = ref('')
 const jobs = ref([])
 const total = ref(0)
+const jobPage = ref(1)
 const cityStats = ref([])
 const hotSkills = ref([])
 const cityOptions = ref([])
@@ -23,6 +25,13 @@ const view = ref('landing')
 const studentTab = ref('profile')
 const favorites = ref(new Set(JSON.parse(localStorage.getItem('favoriteJobs') || '[]')))
 const selectedSkill = ref('')
+const skillPage = ref(1)
+const activeJobDetail = ref(null)
+const jobDetailLoading = ref(false)
+const jobDetailError = ref('')
+
+const JOBS_PER_PAGE = 12
+const SKILLS_PER_PAGE = 8
 
 const demoJobs = [
   { jobKey: 'ncss-demo-1', jobName: '大数据开发工程师', companyName: '华川数智科技', city: '成都', jobCategory: '大数据开发', salaryMin: 9000, salaryMax: 14000, educationRequirement: '本科及以上', experienceRequirement: '经验不限', industry: '计算机软件' },
@@ -45,6 +54,11 @@ const skillSignals = computed(() => {
 })
 const skillMentionTotal = computed(() => skillSignals.value.reduce((sum, item) => sum + item.mentions, 0))
 const focusedSkill = computed(() => skillSignals.value.find((item) => item.name === selectedSkill.value) || skillSignals.value[0])
+const jobPageCount = computed(() => Math.max(1, Math.ceil(total.value / JOBS_PER_PAGE)))
+const skillPageCount = computed(() => Math.max(1, Math.ceil(skillSignals.value.length / SKILLS_PER_PAGE)))
+const visibleSkillSignals = computed(() => skillSignals.value.slice((skillPage.value - 1) * SKILLS_PER_PAGE, skillPage.value * SKILLS_PER_PAGE))
+const jobPageItems = computed(() => pageItems(jobPage.value, jobPageCount.value))
+const skillPageItems = computed(() => pageItems(skillPage.value, skillPageCount.value))
 
 function salary(job) {
   if (!job.salaryMin || !job.salaryMax) return '薪资面议'
@@ -65,6 +79,13 @@ function mergeCityStats(items) {
   return [...totals.entries()]
     .map(([dimensionKey, metricValue]) => ({ dimensionKey, metricValue }))
     .sort((a, b) => b.metricValue - a.metricValue || a.dimensionKey.localeCompare(b.dimensionKey, 'zh-CN'))
+}
+
+function pageItems(current, count) {
+  if (count <= 7) return Array.from({ length: count }, (_, index) => index + 1)
+  if (current <= 4) return [1, 2, 3, 4, 5, 'ellipsis-right', count]
+  if (current >= count - 3) return [1, 'ellipsis-left', count - 4, count - 3, count - 2, count - 1, count]
+  return [1, 'ellipsis-left', current - 1, current, current + 1, 'ellipsis-right', count]
 }
 
 async function loadMarket() {
@@ -105,10 +126,11 @@ async function loadFilters() {
   }
 }
 
-async function search() {
+async function search(requestedPage = 1) {
   loading.value = true
   message.value = ''
-  const params = new URLSearchParams({ page: '1', size: '12' })
+  const safePage = Math.min(Math.max(Number(requestedPage) || 1, 1), jobPageCount.value)
+  const params = new URLSearchParams({ page: String(safePage), size: String(JOBS_PER_PAGE) })
   if (keyword.value.trim()) params.set('keyword', keyword.value.trim())
   if (city.value) params.set('city', city.value)
   if (category.value) params.set('category', category.value)
@@ -118,10 +140,12 @@ async function search() {
     const payload = await response.json()
     jobs.value = payload.records
     total.value = payload.total
+    jobPage.value = payload.page
     usingDemo.value = false
   } catch {
     jobs.value = demoJobs.filter((job) => (!city.value || job.city === city.value) && (!category.value || job.jobCategory === category.value) && (!keyword.value || `${job.jobName}${job.companyName}`.includes(keyword.value)))
     total.value = jobs.value.length
+    jobPage.value = 1
     usingDemo.value = true
     message.value = '当前显示演示数据：本机前端已启动，等待虚拟机后端服务开放后将自动读取真实岗位。'
   } finally {
@@ -129,11 +153,23 @@ async function search() {
   }
 }
 
+function changeJobPage(page) {
+  if (page < 1 || page > jobPageCount.value || page === jobPage.value || loading.value) return
+  search(page)
+  document.querySelector('#jobs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function changeSkillPage(page) {
+  if (page < 1 || page > skillPageCount.value || page === skillPage.value) return
+  skillPage.value = page
+  if (!visibleSkillSignals.value.some((item) => item.name === selectedSkill.value)) selectedSkill.value = visibleSkillSignals.value[0]?.name || ''
+}
+
 function reset() {
   keyword.value = ''
   city.value = ''
   category.value = ''
-  search()
+  search(1)
 }
 
 function openStudent(tab = 'profile') {
@@ -178,9 +214,37 @@ function toggleFavorite(jobKey) {
   localStorage.setItem('favoriteJobs', JSON.stringify([...next]))
 }
 
+async function openJobDetail(job) {
+  activeJobDetail.value = { job, skills: [] }
+  jobDetailLoading.value = true
+  jobDetailError.value = ''
+  try {
+    const response = await fetch(`${apiBase}/jobs/${encodeURIComponent(job.jobKey)}`)
+    if (!response.ok) throw new Error('暂时无法读取岗位完整信息')
+    const payload = await response.json()
+    if (activeJobDetail.value?.job?.jobKey === job.jobKey) activeJobDetail.value = payload
+  } catch (error) {
+    jobDetailError.value = error.message || '暂时无法读取岗位完整信息'
+  } finally {
+    jobDetailLoading.value = false
+  }
+}
+
+function closeJobDetail() {
+  activeJobDetail.value = null
+  jobDetailError.value = ''
+}
+
+function handleGlobalKeydown(event) {
+  if (event.key === 'Escape' && activeJobDetail.value) closeJobDetail()
+}
+
 onMounted(async () => {
-  await Promise.all([search(), loadMarket(), loadFilters()])
+  window.addEventListener('keydown', handleGlobalKeydown)
+  await Promise.all([search(1), loadMarket(), loadFilters()])
 })
+
+onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown))
 </script>
 
 <template>
@@ -201,7 +265,7 @@ onMounted(async () => {
         <button :class="{ active: view === 'student' }" type="button" @click="openStudent('profile')">我的画像</button>
       </nav>
       <div class="top-actions">
-        <button class="university-button" type="button" title="返回身份选择" @click="showPortal"><span>切换身份</span></button>
+        <button class="university-button" type="button" title="返回初始页" @click="showPortal"><Home :size="15" /><span>返回初始页</span></button>
         <button class="profile-button" type="button" @click="openStudent('recommendations')"><UserRound :size="15" />我的工作台<ArrowRight :size="15" /></button>
       </div>
     </header>
@@ -231,7 +295,7 @@ onMounted(async () => {
 
     <section id="jobs" class="job-zone">
       <div class="section-head"><div><p class="eyebrow">01 / 市场岗位</p><h2>从市场里挑选方向</h2></div><p>筛选条件来自你的偏好，而不是一份冷冰冰的岗位清单。</p></div>
-      <form class="filter-bar" @submit.prevent="search">
+      <form class="filter-bar" @submit.prevent="search(1)">
         <label class="search-field"><Search :size="18" /><input v-model="keyword" placeholder="搜索岗位或公司" /></label>
         <SearchSelect v-model="city" class="filter-picker" label="搜索或选择城市" placeholder="搜索城市" empty-label="全部城市" :options="cityOptions" />
         <SearchSelect v-model="category" class="filter-picker" label="搜索或选择岗位方向" placeholder="搜索方向" empty-label="全部方向" :options="categoryOptions" />
@@ -240,14 +304,23 @@ onMounted(async () => {
       <p v-if="message" class="notice">{{ message }}</p>
       <div class="result-caption"><span>{{ loading ? '正在读取岗位…' : `发现 ${total.toLocaleString()} 个岗位机会` }}</span><span>{{ usingDemo ? 'DEMO MODE' : 'LIVE FROM MYSQL' }}</span></div>
       <div class="job-grid">
-        <article v-for="job in jobs" :key="job.jobKey" class="job-card">
-          <div class="card-top"><span class="category-tag">{{ job.jobCategory || '其他' }}</span><button type="button" :class="{ saved: favorites.has(job.jobKey) }" :aria-label="favorites.has(job.jobKey) ? '取消收藏岗位' : '收藏岗位'" :aria-pressed="favorites.has(job.jobKey)" :title="favorites.has(job.jobKey) ? '取消收藏' : '收藏岗位'" @click="toggleFavorite(job.jobKey)"><Heart :size="18" :fill="favorites.has(job.jobKey) ? 'currentColor' : 'none'" /></button></div>
+        <article v-for="job in jobs" :key="job.jobKey" class="job-card job-card-clickable" role="button" tabindex="0" :aria-label="`查看${job.jobName}岗位详情`" @click="openJobDetail(job)" @keydown.enter="openJobDetail(job)" @keydown.space.prevent="openJobDetail(job)">
+          <div class="card-top"><span class="category-tag">{{ job.jobCategory || '其他' }}</span><button type="button" :class="{ saved: favorites.has(job.jobKey) }" :aria-label="favorites.has(job.jobKey) ? '取消收藏岗位' : '收藏岗位'" :aria-pressed="favorites.has(job.jobKey)" :title="favorites.has(job.jobKey) ? '取消收藏' : '收藏岗位'" @click.stop="toggleFavorite(job.jobKey)"><Heart :size="18" :fill="favorites.has(job.jobKey) ? 'currentColor' : 'none'" /></button></div>
           <h3>{{ job.jobName }}</h3><p class="company">{{ job.companyName }}</p>
           <p class="salary">{{ salary(job) }} <small>/ 月</small></p>
           <div class="facts"><span><MapPin :size="13" />{{ normalizeCity(job.city) }}</span><span><GraduationCap :size="13" />{{ job.educationRequirement || '学历不限' }}</span><span><Clock3 :size="13" />{{ job.experienceRequirement || '经验不限' }}</span></div>
-          <footer><span>{{ job.industry || '行业待补充' }}</span><button type="button" @click="openStudent('recommendations')">查看推荐<ArrowRight :size="15" /></button></footer>
+          <footer><span>{{ job.industry || '行业待补充' }}</span><span class="job-card-open-hint" aria-hidden="true"><ArrowRight :size="17" /></span></footer>
         </article>
       </div>
+      <nav v-if="jobPageCount > 1" class="data-pagination" aria-label="岗位分页">
+        <button type="button" class="pagination-step" :disabled="jobPage === 1 || loading" aria-label="上一页岗位" @click="changeJobPage(jobPage - 1)"><ChevronLeft :size="16" /></button>
+        <template v-for="item in jobPageItems" :key="item">
+          <span v-if="typeof item !== 'number'" class="pagination-ellipsis" aria-hidden="true">···</span>
+          <button v-else type="button" class="pagination-number" :class="{ active: item === jobPage }" :aria-current="item === jobPage ? 'page' : undefined" @click="changeJobPage(item)">{{ item }}</button>
+        </template>
+        <button type="button" class="pagination-step" :disabled="jobPage === jobPageCount || loading" aria-label="下一页岗位" @click="changeJobPage(jobPage + 1)"><ChevronRight :size="16" /></button>
+        <span class="pagination-summary">第 {{ jobPage }} / {{ jobPageCount }} 页</span>
+      </nav>
     </section>
 
     </template>
@@ -269,12 +342,21 @@ onMounted(async () => {
 
         <div class="skills-analytics">
           <section class="skills-ranking">
-            <div class="skills-page-head"><div><p class="eyebrow">需求强度</p><h2>市场技能排名</h2></div><span>点击一项查看重点</span></div>
+            <div class="skills-page-head"><div><p class="eyebrow">需求强度</p><h2>市场技能排名</h2></div><span>每页 {{ SKILLS_PER_PAGE }} 项 · 点击一项查看重点</span></div>
             <div class="skill-signal-list">
-              <button v-for="skill in skillSignals" :key="skill.name" class="skill-signal" :class="{ selected: focusedSkill?.name === skill.name }" type="button" :aria-pressed="focusedSkill?.name === skill.name" @click="selectedSkill = skill.name">
+              <button v-for="skill in visibleSkillSignals" :key="skill.name" class="skill-signal" :class="{ selected: focusedSkill?.name === skill.name }" type="button" :aria-pressed="focusedSkill?.name === skill.name" @click="selectedSkill = skill.name">
                 <span class="skill-signal-rank">{{ String(skill.rank).padStart(2, '0') }}</span><strong>{{ skill.name }}</strong><i><b :style="{ width: `${skill.strength}%` }"></b></i><em>{{ skill.mentions.toLocaleString() }}</em>
               </button>
             </div>
+            <nav v-if="skillPageCount > 1" class="data-pagination skills-pagination" aria-label="技能信号分页">
+              <button type="button" class="pagination-step" :disabled="skillPage === 1" aria-label="上一页技能信号" @click="changeSkillPage(skillPage - 1)"><ChevronLeft :size="16" /></button>
+              <template v-for="item in skillPageItems" :key="item">
+                <span v-if="typeof item !== 'number'" class="pagination-ellipsis" aria-hidden="true">···</span>
+                <button v-else type="button" class="pagination-number" :class="{ active: item === skillPage }" :aria-current="item === skillPage ? 'page' : undefined" @click="changeSkillPage(item)">{{ item }}</button>
+              </template>
+              <button type="button" class="pagination-step" :disabled="skillPage === skillPageCount" aria-label="下一页技能信号" @click="changeSkillPage(skillPage + 1)"><ChevronRight :size="16" /></button>
+              <span class="pagination-summary">第 {{ skillPage }} / {{ skillPageCount }} 页</span>
+            </nav>
           </section>
 
           <aside class="skill-focus-panel">
@@ -297,5 +379,7 @@ onMounted(async () => {
 
     <StudentWorkspace v-else :api-base="apiBase" :student-id="1" :city-options="cityOptions" :category-options="categoryOptions" :initial-tab="studentTab" @back-to-market="showMarket()" />
     </template>
+
+    <JobDetailDrawer :detail="activeJobDetail" :loading="jobDetailLoading" :error="jobDetailError" @close="closeJobDetail" />
   </main>
 </template>

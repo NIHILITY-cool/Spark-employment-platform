@@ -1,0 +1,9 @@
+.data-pagination{display:flex;align-items:center;justify-content:center;gap:5px;min-height:58px;margin-top:22px;padding:10px;border-top:1px solid #dfe9e7;color:#617984}
+.pagination-number,.pagination-step{display:grid;place-items:center;min-width:34px;height:34px;padding:0;border:1px solid transparent;background:transparent;color:#476771;font:500 11px "DM Mono",monospace}
+.pagination-number:hover:not(.active),.pagination-step:hover:not(:disabled){border-color:#bcd1cd;background:#edf6f1;color:#1f6654}
+.pagination-number.active{border-color:#0b2f50;background:#0b2f50;color:#fff;font-weight:700}
+.pagination-step:disabled{cursor:not-allowed;opacity:.34}
+.pagination-ellipsis{display:grid;place-items:center;width:24px;height:34px;color:#8a9da0;font:500 11px "DM Mono",monospace}
+.pagination-summary{margin-left:9px;color:#758b8e;font:500 10px "DM Mono",monospace;white-space:nowrap}
+.skills-pagination{justify-content:flex-start;margin-top:18px;padding-bottom:0;border-top:0}
+@media(max-width:600px){.data-pagination{gap:2px}.pagination-number,.pagination-step{min-width:31px;height:32px}.pagination-summary{display:none}.pagination-ellipsis{width:19px}}

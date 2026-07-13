@@ -1,7 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import {
-  ArrowLeft,
   BriefcaseBusiness,
   Building2,
   ChartNoAxesCombined,
@@ -12,6 +11,7 @@ import {
   Lightbulb,
   LoaderCircle,
   MapPinned,
+  Home,
   RefreshCw,
   SlidersHorizontal,
   Sparkles,
@@ -112,13 +112,15 @@ onMounted(() => loadAnalysis(true))
 <template>
   <section class="university-workspace">
     <header class="university-banner">
-      <button class="icon-command" type="button" title="返回身份选择" @click="emit('back-to-portal')"><ArrowLeft :size="18" /></button>
-      <div>
+      <div class="university-banner-copy">
         <p class="eyebrow">高校培养参考 · 公开岗位证据</p>
         <h1>从市场需求反推训练重点。</h1>
         <p>不使用毕业去向数据，不评价培养质量；只回答岗位在哪里、需要什么、训练组合能覆盖多少需求。</p>
       </div>
-      <div class="data-stamp"><Database :size="18" /><span>数据批次</span><strong>2026-07-11</strong></div>
+      <div class="university-banner-actions">
+        <button class="university-button" type="button" title="返回初始页" @click="emit('back-to-portal')"><Home :size="15" /><span>返回初始页</span></button>
+        <div class="data-stamp"><Database :size="18" /><span>数据批次</span><strong>2026-07-11</strong></div>
+      </div>
     </header>
 
     <form class="analysis-controls" @submit.prevent="loadAnalysis(false)">

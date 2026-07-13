@@ -137,7 +137,9 @@ def read_ncss(spark: SparkSession, root: str, date: str) -> DataFrame:
     salary_text = cleaned_text("salary_text")
     lower = F.regexp_extract(salary_text, r"(\d+(?:\.\d+)?)K\s*-", 1)
     upper = F.regexp_extract(salary_text, r"-\s*(\d+(?:\.\d+)?)K", 1)
-    description = F.concat_ws(" ", cleaned_text("job_description"), cleaned_text("job_responsibility"), cleaned_text("job_requirement"))
+    # NCSS 的职责和要求字段来源及分段格式不稳定，且职责字段可能是完整描述的兜底副本。
+    # 仅保留采集后清洗的岗位描述，避免重复拼接并保留原始文本语义。
+    description = cleaned_text("job_description")
     student_hint = r"应届|毕业生|校园招聘|校招|实习|学生|在校"
     hard_experience = r"(?:[3-9]|[1-9][0-9])\s*年\s*(?:以上|及以上).{0,8}(?:经验|经历)"
     frame = raw.select(
