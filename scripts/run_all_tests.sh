@@ -1,9 +1,10 @@
 #!/bin/bash
-# 运行所有测试
+set -euo pipefail
+
+# 运行所有测试和构建检查
 echo "Running tests..."
 cd "$(dirname "$0")/.."
-pytest data_source/tests/ 2>/dev/null
-pytest data_processing/tests/ 2>/dev/null
-pytest recommendation/tests/ 2>/dev/null
-pytest backend/tests/ 2>/dev/null
+python3 -m pytest data_source/tests/ data_processing/tests/ recommendation/tests/
+(cd backend && mvn test)
+(cd frontend && npm run build)
 echo "All tests completed"

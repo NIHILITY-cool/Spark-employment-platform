@@ -1,0 +1,42 @@
+alias,skill_name
+python,Python
+py,Python
+java,Java
+sql,SQL
+mysql,MySQL
+redis,Redis
+spark,Spark
+pyspark,Spark
+hadoop,Hadoop
+hive,Hive
+flink,Flink
+kafka,Kafka
+spring boot,Spring Boot
+springboot,Spring Boot
+spring cloud,Spring Cloud
+springcloud,Spring Cloud
+vue,Vue
+vue.js,Vue
+react,React
+javascript,JavaScript
+js,JavaScript
+typescript,TypeScript
+ts,TypeScript
+html,HTML
+css,CSS
+echarts,ECharts
+pandas,Pandas
+numpy,NumPy
+tableau,Tableau
+power bi,Power BI
+excel,Excel
+linux,Linux
+docker,Docker
+kubernetes,Kubernetes
+k8s,Kubernetes
+git,Git
+jenkins,Jenkins
+tensorflow,TensorFlow
+pytorch,PyTorch
+机器学习,机器学习
+深度学习,深度学习

@@ -1,0 +1,99 @@
+{
+  "source_name": "国家大学生就业服务平台",
+  "merge_mode": "dedupe_by_source_job_id",
+  "generated_at": "2026-07-11T16:01:14",
+  "input_file_count": 12,
+  "input_record_count": 10834,
+  "record_count": 10834,
+  "unique_source_job_id_count": 10834,
+  "skipped_duplicate_count": 0,
+  "skipped_missing_source_job_id_count": 0,
+  "input_files": [
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-10\\run=20260710_202419\\jobs_ncss_2026-07-10_batch001.jsonl",
+      "record_count": 1200,
+      "added_count": 1200,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    },
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-10\\run=20260710_205055\\jobs_ncss_2026-07-10_batch001.jsonl",
+      "record_count": 1576,
+      "added_count": 1576,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    },
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-10\\run=20260710_210645\\jobs_ncss_2026-07-10_batch001.jsonl",
+      "record_count": 182,
+      "added_count": 182,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    },
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-10\\run=20260710_211137\\jobs_ncss_2026-07-10_batch001.jsonl",
+      "record_count": 3388,
+      "added_count": 3388,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    },
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-10\\run=20260710_214233\\jobs_ncss_2026-07-10_batch001.jsonl",
+      "record_count": 1149,
+      "added_count": 1149,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    },
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-11\\run=20260711_150424\\jobs_ncss_2026-07-11_batch001.jsonl",
+      "record_count": 461,
+      "added_count": 461,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    },
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-11\\run=20260711_151058\\jobs_ncss_2026-07-11_batch001.jsonl",
+      "record_count": 455,
+      "added_count": 455,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    },
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-11\\run=20260711_151710\\jobs_ncss_2026-07-11_batch001.jsonl",
+      "record_count": 173,
+      "added_count": 173,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    },
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-11\\run=20260711_152036\\jobs_ncss_2026-07-11_batch001.jsonl",
+      "record_count": 2162,
+      "added_count": 2162,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    },
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-11\\run=20260711_154411\\jobs_ncss_2026-07-11_batch001.jsonl",
+      "record_count": 56,
+      "added_count": 56,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    },
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-11\\run=20260711_154948\\jobs_ncss_2026-07-11_batch001.jsonl",
+      "record_count": 28,
+      "added_count": 28,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    },
+    {
+      "input_file": "data\\raw\\ncss_jobs\\date=2026-07-11\\run=20260711_155717\\jobs_ncss_2026-07-11_batch001.jsonl",
+      "record_count": 4,
+      "added_count": 4,
+      "skipped_duplicate_count": 0,
+      "skipped_missing_source_job_id_count": 0
+    }
+  ],
+  "output_jsonl": "data\\raw\\ncss_jobs\\date=2026-07-11\\run=20260711_160114_merged\\jobs_ncss_2026-07-11_merged.jsonl",
+  "output_csv": "data\\raw\\ncss_jobs\\date=2026-07-11\\run=20260711_160114_merged\\jobs_ncss_2026-07-11_merged.csv"
+}

@@ -28,6 +28,8 @@
 - `major_skill_gap` - 专业技能缺口
 - `market_demand_statistics` - 市场需求统计
 
+第一条 Spark 数据链路已使用 `schema.sql` 中的 `job`、`job_skill`、`market_statistic` 三张表：分别保存岗位画像、岗位技能和市场聚合结果。
+
 ## 初始化
 
 ```bash
@@ -36,6 +38,8 @@ mysql -u root -p < seed/majors.sql
 mysql -u root -p < seed/skills.sql
 mysql -u root -p < seed/admin_user.sql
 ```
+
+数据库账号、密码和 JDBC 地址仅通过环境变量传入 Spark 与 Spring Boot，不能写入仓库。
 
 ## 当前负责人
 

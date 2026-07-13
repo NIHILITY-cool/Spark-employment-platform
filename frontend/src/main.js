@@ -1,0 +1,13 @@
+import { createApp } from 'vue'
+import App from './App.vue'
+import './styles.css'
+import './picker.css'
+import './workspace.css'
+import './university.css'
+import './role-landing.css'
+import './search-select.css'
+import './skills-page.css'
+import './pagination.css'
+import './job-detail.css'
+
+createApp(App).mount('#app')

@@ -1,0 +1,34 @@
+skill_name,skill_category,default_weight
+Python,编程语言,1.0
+Java,编程语言,1.0
+SQL,数据库,1.0
+MySQL,数据库,1.0
+Redis,数据库,0.9
+Spark,大数据,1.2
+Hadoop,大数据,1.1
+Hive,大数据,1.0
+Flink,大数据,1.2
+Kafka,大数据,1.0
+Spring Boot,后端框架,1.1
+Spring Cloud,后端框架,1.1
+Vue,前端框架,1.0
+React,前端框架,1.0
+JavaScript,前端开发,1.0
+TypeScript,前端开发,1.0
+HTML,前端开发,0.8
+CSS,前端开发,0.8
+ECharts,数据可视化,0.9
+Pandas,数据分析,0.9
+NumPy,数据分析,0.8
+Tableau,数据可视化,1.0
+Power BI,数据可视化,1.0
+Excel,办公与分析,0.7
+Linux,系统运维,0.9
+Docker,系统运维,1.0
+Kubernetes,系统运维,1.1
+Git,工程协作,0.8
+Jenkins,工程协作,0.9
+TensorFlow,人工智能,1.1
+PyTorch,人工智能,1.1
+机器学习,人工智能,1.1
+深度学习,人工智能,1.1
