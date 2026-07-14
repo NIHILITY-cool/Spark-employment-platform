@@ -75,7 +75,9 @@ mysql -u root -p < ../database/schema.sql
 
 ### 高校培养参考
 
+- `GET /api/university/market-dashboard` - 高校端市场看板聚合，返回总览 KPI、岗位大类、地区类别结构、城市行业热力、薪资学历、技能需求和数据质量
 - `GET /api/university/training-alignment?major={专业}&city={地区}` - 读取专业对应的公开岗位样本、低经验门槛岗位、薪资、行业、学历、技能和地区岗位方向矩阵
+- `GET /api/university/industry-salary-distribution?city={地区}` - 按岗位文本规则聚合十大行业薪资档位、有效薪资样本和平均月薪
 
 当前支持数据科学与大数据技术、计算机科学与技术、软件工程、统计学和人工智能五个专业方向。接口基于 Spark 清洗并写入 MySQL 的岗位数据做即席聚合，不使用毕业生去向数据，也不输出培养质量结论。
 

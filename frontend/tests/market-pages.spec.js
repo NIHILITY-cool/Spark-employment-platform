@@ -37,7 +37,7 @@ async function mockMarketApi(page) {
   })
 }
 
-test('skills signal is a separate student market page with interactive analysis', async ({ page }) => {
+test('skills signal is a separate student market page with interactive analysis', async ({ page }, testInfo) => {
   await mockMarketApi(page)
   await page.goto('/')
   await page.getByRole('button', { name: '进入学生端' }).click()
@@ -53,7 +53,7 @@ test('skills signal is a separate student market page with interactive analysis'
   await page.getByRole('button', { name: '下一页技能信号' }).click()
   await expect(page.locator('.skill-signal')).toHaveCount(2)
   await expect(page.locator('.skill-signal').filter({ hasText: 'Flink' })).toBeVisible()
-  await page.screenshot({ path: '/tmp/skills-page-desktop.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('skills-page-desktop.png'), fullPage: true })
 })
 
 test('student market requests a new backend page instead of expanding all jobs', async ({ page }) => {
@@ -84,14 +84,14 @@ test('clicking a job opens a detailed in-page job drawer', async ({ page }) => {
   await expect(dialog).toHaveCount(0)
 })
 
-test('student market selectors use the shared searchable picker on mobile', async ({ page }) => {
+test('student market selectors use the shared searchable picker on mobile', async ({ page }, testInfo) => {
   await mockMarketApi(page)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await page.getByRole('button', { name: '进入学生端' }).click()
   await page.getByRole('tab', { name: '技能信号' }).click()
   await expect(page.getByRole('heading', { name: '市场技能排名' })).toBeVisible()
-  await page.screenshot({ path: '/tmp/skills-page-mobile.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('skills-page-mobile.png'), fullPage: true })
 
   await page.getByRole('tab', { name: '岗位市场' }).click()
   const cityPicker = page.getByRole('combobox', { name: '搜索或选择城市' })

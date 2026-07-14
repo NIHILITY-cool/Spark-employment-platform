@@ -11,6 +11,7 @@ from pyspark.sql.types import StringType, StructField, StructType
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from location_normalization import parse_zhilian_monthly_salary, resolve_city
+from industry_normalization import load_industry_rules, normalize_industry
 
 
 HDFS_ROOT = "/employment-platform"
@@ -42,6 +43,7 @@ parse_zhilian_salary_udf = F.udf(
     lambda value: tuple(str(item) if item is not None else None for item in parse_zhilian_monthly_salary(value)),
     SALARY_RESULT_SCHEMA,
 )
+normalize_industry_udf = None
 
 
 def parse_args() -> argparse.Namespace:
@@ -72,8 +74,12 @@ def normalize_common(frame: DataFrame, source: str, date: str) -> DataFrame:
     for column in text_columns:
         frame = frame.withColumn(column, cleaned_text(column))
 
+    if normalize_industry_udf is None:
+        raise RuntimeError("industry normalization UDF is not initialized")
+
     frame = (
-        frame.withColumn("_location", resolve_location_udf(F.col("city"), F.col("district"), F.col("job_description")))
+        frame.withColumn("industry", normalize_industry_udf(F.col("industry")))
+        .withColumn("_location", resolve_location_udf(F.col("city"), F.col("district"), F.col("job_description")))
         .withColumn("city", F.col("_location.city"))
         .drop("_location")
         .withColumn("education", F.when(F.col("education") == "统招本科", F.lit("本科")).otherwise(F.col("education")))
@@ -170,10 +176,17 @@ def read_zhilian(spark: SparkSession, root: str, date: str) -> DataFrame:
 
 
 def main() -> None:
+    global normalize_industry_udf
     args = parse_args()
     spark = SparkSession.builder.appName("employment-job-cleaning").getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
     spark.sparkContext.addPyFile(str(Path(__file__).resolve().parents[1] / "location_normalization.py"))
+    spark.sparkContext.addPyFile(str(Path(__file__).resolve().parents[1] / "industry_normalization.py"))
+    rules = load_industry_rules()
+    normalize_industry_udf = F.udf(
+        lambda value, normalization_rules=rules: normalize_industry(value, normalization_rules).industry,
+        StringType(),
+    )
 
     jobs = read_guopin(spark, args.hdfs_root, args.date) \
         .unionByName(read_liepin(spark, args.hdfs_root, args.date)) \

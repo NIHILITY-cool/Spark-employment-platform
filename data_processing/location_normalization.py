@@ -29,7 +29,7 @@ CANONICAL_CITIES = frozenset("""
 合肥 芜湖 蚌埠 淮南 马鞍山 淮北 铜陵 安庆 黄山 滁州 阜阳 宿州 六安 亳州 池州 宣城 桐城 潜山 界首 天长 明光
 福州 厦门 莆田 三明 泉州 漳州 南平 龙岩 宁德 福清 长乐 永安 石狮 晋江 南安 龙海 漳平 福安 福鼎 邵武 武夷山 建瓯 建阳
 南昌 景德镇 萍乡 九江 新余 鹰潭 赣州 吉安 宜春 抚州 上饶 瑞昌 共青城 庐山 乐平 瑞金 龙南 井冈山 丰城 樟树 高安 贵溪 德兴
-济南 青岛 淄博 枣庄 东营 烟台 潍坊 济宁 泰安 威海 日照 临沂 德州 聊城 滨州 菏泽 胶州 平度 莱西 滕州 龙口 莱阳 莱州 蓬莱 招远 栖霞 海阳 青州 诸城 寿光 安丘 高密 昌邑 曲阜 邹城 新泰 肥城 荣成 乳山 乐陵 禹城 临清
+济南 青岛 淄博 枣庄 东营 烟台 潍坊 济宁 泰安 威海 日照 临沂 德州 聊城 滨州 菏泽 莱芜 胶州 平度 莱西 滕州 龙口 莱阳 莱州 蓬莱 招远 栖霞 海阳 青州 诸城 寿光 安丘 高密 昌邑 曲阜 邹城 新泰 肥城 荣成 乳山 乐陵 禹城 临清
 郑州 开封 洛阳 平顶山 安阳 鹤壁 新乡 焦作 濮阳 许昌 漯河 三门峡 南阳 商丘 信阳 周口 驻马店 济源 巩义 荥阳 新密 新郑 登封 偃师 孟州 沁阳 卫辉 辉县 长垣 林州 禹州 长葛 义马 灵宝 邓州 永城 汝州 项城
 武汉 黄石 十堰 宜昌 襄阳 鄂州 荆门 孝感 荆州 黄冈 咸宁 随州 恩施 仙桃 潜江 天门 丹江口 宜都 当阳 枝江 老河口 枣阳 宜城 钟祥 应城 安陆 汉川 石首 洪湖 松滋 麻城 武穴 赤壁 广水 利川
 长沙 株洲 湘潭 衡阳 邵阳 岳阳 常德 张家界 益阳 郴州 永州 怀化 娄底 湘西 浏阳 宁乡 醴陵 湘乡 韶山 耒阳 常宁 武冈 汨罗 临湘 津市 沅江 资兴 洪江 冷水江 涟源 吉首
@@ -126,6 +126,10 @@ def resolve_city(city_value: object, district_value: object = "", description: o
     if extracted:
         return extracted, "city"
     raw_city = normalize_city_name(city_value)
+    if raw_city == "全国":
+        return raw_city, "province"
+    if is_province_level(raw_city) and LOCATION_LABEL_RE.search(clean_text(description)):
+        return raw_city, "province"
     return UNKNOWN_CITY, "province" if is_province_level(raw_city) else "unknown"
 
 

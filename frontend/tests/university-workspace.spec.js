@@ -26,6 +26,43 @@ const analysis = {
   dataBasis: '基于 Spark 清洗后写入 MySQL 的 2026-07-11 公开岗位批次；仅反映近期市场需求，不代表培养质量或长期预测。',
 }
 
+const dashboard = {
+  statDate: '2026-07-11',
+  filter: {},
+  summary: { jobCount: 12000, companyCount: 7300, cityCount: 86, industryCount: 42, averageSalary: 8840, medianSalary: 7600, maxSalary: 45000, entryFriendlyCount: 8300, skillJobCount: 2505 },
+  cities: [{ key: '北京', jobCount: 722, averageSalaryMin: 9800, averageSalaryMax: 16000 }, { key: '成都', jobCount: 705, averageSalaryMin: 7600, averageSalaryMax: 12800 }],
+  industries: [{ key: '计算机软件', jobCount: 645 }, { key: '教育/培训/院校', jobCount: 1045 }],
+  education: [{ key: '本科及以上', jobCount: 4194 }, { key: '专科及以上', jobCount: 4651 }],
+  companyScales: [{ key: '100-499人', jobCount: 2800 }, { key: '20-99人', jobCount: 2400 }],
+  jobCategories: [{ key: '软件开发', jobCount: 1180 }, { key: '数据分析', jobCount: 840 }],
+  hotJobs: [{ key: '软件开发工程师', jobCount: 128, averageSalaryMin: 9000, averageSalaryMax: 15000 }],
+  hotSkills: [{ key: 'Python', jobCount: 841 }, { key: 'Java', jobCount: 782 }, { key: 'SQL', jobCount: 669 }],
+  salaryBuckets: [{ key: '5k-8k', jobCount: 4800 }, { key: '8k-12k', jobCount: 3100 }],
+  categoryFamilies: [
+    { family: '技术研发', jobCount: 3180, typicalJobs: ['软件开发', '算法', '测试', '运维', '硬件工程师'], rule: '产出代码、技术方案或产品原型', categories: [{ key: '软件开发', jobCount: 1180 }] },
+    { family: '产品运营', jobCount: 1860, typicalJobs: ['产品经理', '用户运营', '数据分析', '项目管理'], rule: '围绕产品生命周期，连接技术与市场', categories: [{ key: '数据分析', jobCount: 840 }] },
+  ],
+  regionalCategoryShares: [
+    { city: '北京', jobCount: 722, categories: [{ key: '技术研发', jobCount: 260 }, { key: '产品运营', jobCount: 180 }] },
+    { city: '成都', jobCount: 705, categories: [{ key: '技术研发', jobCount: 220 }, { key: '产品运营', jobCount: 160 }] },
+  ],
+  cityIndustryHeatmap: [{ x: '北京', y: '计算机软件', jobCount: 150 }, { x: '成都', y: '教育/培训/院校', jobCount: 96 }],
+  suggestions: ['岗位需求集中在北京、成都，建议将这些地区作为就业信息推送和校企合作重点。'],
+  dataQuality: {
+    statDate: '2026-07-11',
+    source: 'NCSS、国聘、猎聘、智联公开岗位',
+    rawRecordCount: 12025,
+    cleanedRecordCount: 12000,
+    excludedRecordCount: 25,
+    duplicateJobIdCount: 0,
+    missingFields: [{ key: 'industry', count: 14, rate: 0.12 }],
+    exclusionReasons: [{ key: 'hard_experience_requirement', count: 22, rate: 0.18 }],
+    salaryParseStatus: [{ key: '已解析', count: 12000, rate: 100 }],
+    note: '字段缺失按当前 MySQL 有效岗位批次统计。',
+  },
+  dataBasis: '基于 Spark 清洗后写入 MySQL 的 2026-07-11 公开岗位批次。',
+}
+
 const industrySalary = {
   statDate: '2026-07-11',
   city: '',
@@ -44,7 +81,9 @@ const industrySalary = {
 async function mockApi(page) {
   await page.route((url) => url.pathname.startsWith('/api/'), async (route) => {
     const url = route.request().url()
-    if (url.includes('/university/training-alignment')) {
+    if (url.includes('/university/market-dashboard')) {
+      await route.fulfill({ json: dashboard })
+    } else if (url.includes('/university/training-alignment')) {
       const requestUrl = new URL(url)
       await route.fulfill({ json: { ...analysis, city: requestUrl.searchParams.get('city') || '' } })
     } else if (url.includes('/university/industry-salary-distribution')) {
@@ -60,14 +99,24 @@ async function mockApi(page) {
   })
 }
 
-test('university training scenario controls update the evidence view', async ({ page }) => {
+test('university training scenario controls update the evidence view', async ({ page }, testInfo) => {
   await mockApi(page)
   await page.goto('/')
   await page.getByRole('button', { name: '进入高校端' }).click()
-  await expect(page.getByRole('heading', { name: '从市场需求反推训练重点。' })).toBeVisible()
-  await expect(page.getByText('286')).toBeVisible()
-  await expect(page.getByRole('heading', { name: '行业薪资分布' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '用岗位数据支撑就业指导。' })).toBeVisible()
+  await expect(page.getByText('地区岗位结构占比')).toBeVisible()
+
+  await page.getByRole('button', { name: '岗位需求' }).click()
+  await expect(page.getByText('岗位大类归并规则')).toBeVisible()
+
+  await page.getByRole('button', { name: '薪资技能' }).click()
+  await expect(page.getByRole('heading', { name: '十大行业薪资分布' })).toBeVisible()
   await expect(page.locator('.industry-salary-chart canvas')).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('university-salary-desktop.png'), fullPage: true })
+
+  await page.getByRole('button', { name: '专业方向' }).click()
+  await expect(page.getByRole('heading', { name: '计划强化技能组合' })).toBeVisible()
+  await expect(page.getByText('286')).toBeVisible()
 
   const coverage = page.locator('.coverage-display strong')
   const initialCoverage = Number((await coverage.textContent()).replace('%', ''))
@@ -84,17 +133,20 @@ test('university training scenario controls update the evidence view', async ({ 
   await expect(page.locator('.matrix-cell')).toHaveCount(6)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)
-  await page.screenshot({ path: '/tmp/university-workspace-desktop.png', fullPage: true })
 })
 
-test('university evidence view is contained on mobile', async ({ page }) => {
+test('university evidence view is contained on mobile', async ({ page }, testInfo) => {
   await mockApi(page)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await page.getByRole('button', { name: '进入高校端' }).click()
-  await expect(page.getByText('计划强化技能组合')).toBeVisible()
+  await page.getByRole('button', { name: '岗位需求' }).click()
+  await expect(page.getByText('岗位大类归并规则')).toBeVisible()
+  await page.getByRole('button', { name: '薪资技能' }).click()
   await expect(page.locator('.industry-salary-chart canvas')).toBeVisible()
+  await page.getByRole('button', { name: '专业方向' }).click()
+  await expect(page.getByText('计划强化技能组合')).toBeVisible()
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)
-  await page.screenshot({ path: '/tmp/university-workspace-mobile.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('university-training-mobile.png'), fullPage: true })
 })

@@ -4,6 +4,8 @@
 
 使用 Pandas 和 Spark 完成岗位数据清洗、标准化、技能提取、岗位画像构建和市场需求统计分析。
 
+行业字段通过 `dictionaries/industries.csv` 的标准行业、别名和关键词统一归类。Pandas 合并任务与 Spark 主清洗任务共用 `industry_normalization.py` 规则；低置信度值归入“其他”，空值保留为“未标注”。
+
 ## 环境安装
 
 ```bash
