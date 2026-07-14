@@ -26,6 +26,7 @@ import java.security.SecureRandom;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.time.Year;
 import java.util.Base64;
 import java.util.List;
@@ -38,11 +39,13 @@ public class AuthService {
     private static final List<String> ROLES = List.of("STUDENT", "UNIVERSITY", "ADMIN");
     private final JdbcTemplate jdbc;
     private final PasswordEncoder passwordEncoder;
+    private final RedisSessionStore sessionStore;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public AuthService(JdbcTemplate jdbc, PasswordEncoder passwordEncoder) {
+    public AuthService(JdbcTemplate jdbc, PasswordEncoder passwordEncoder, RedisSessionStore sessionStore) {
         this.jdbc = jdbc;
         this.passwordEncoder = passwordEncoder;
+        this.sessionStore = sessionStore;
     }
 
     @Transactional
@@ -98,11 +101,19 @@ public class AuthService {
 
     public Optional<AuthenticatedAccount> authenticate(String token) {
         if (!StringUtils.hasText(token)) return Optional.empty();
-        return jdbc.query("""
+        String tokenHash = hash(token);
+        Optional<AuthenticatedAccount> cached = sessionStore.find(tokenHash);
+        if (cached.isPresent()) return cached;
+        SessionRow session = jdbc.query("""
                         SELECT a.id, a.role, a.username, a.display_name, a.student_id, a.enabled
+                             , s.expires_at
                         FROM auth_session s JOIN platform_account a ON a.id = s.account_id
                         WHERE s.token_hash = ? AND s.expires_at > NOW() AND a.enabled = 1
-                        """, rs -> rs.next() ? Optional.of(account(rs)) : Optional.empty(), hash(token));
+                        """, rs -> rs.next() ? new SessionRow(account(rs), rs.getTimestamp("expires_at").toLocalDateTime()) : null,
+                tokenHash);
+        if (session == null) return Optional.empty();
+        sessionStore.put(tokenHash, session.account(), Duration.between(LocalDateTime.now(), session.expiresAt()));
+        return Optional.of(session.account());
     }
 
     public AccountView me() {
@@ -110,7 +121,10 @@ public class AuthService {
     }
 
     public void logout(String token) {
-        if (StringUtils.hasText(token)) jdbc.update("DELETE FROM auth_session WHERE token_hash = ?", hash(token));
+        if (!StringUtils.hasText(token)) return;
+        String tokenHash = hash(token);
+        jdbc.update("DELETE FROM auth_session WHERE token_hash = ?", tokenHash);
+        sessionStore.evict(tokenHash);
     }
 
     public List<AdminAccountView> accounts() {
@@ -128,7 +142,7 @@ public class AuthService {
                 passwordEncoder.encode(password), accountId) == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "账号不存在");
         }
-        jdbc.update("DELETE FROM auth_session WHERE account_id = ?", accountId);
+        deleteAccountSessions(accountId);
     }
 
     @Transactional
@@ -138,7 +152,7 @@ public class AuthService {
         if (jdbc.update("UPDATE platform_account SET enabled = ? WHERE id = ?", enabled, accountId) == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "账号不存在");
         }
-        if (!enabled) jdbc.update("DELETE FROM auth_session WHERE account_id = ?", accountId);
+        if (!enabled) deleteAccountSessions(accountId);
     }
 
     @Transactional
@@ -152,7 +166,7 @@ public class AuthService {
         } catch (DuplicateKeyException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "该账号名已被使用");
         }
-        jdbc.update("DELETE FROM auth_session WHERE account_id = ?", accountId);
+        deleteAccountSessions(accountId);
     }
 
     @Transactional
@@ -195,7 +209,8 @@ public class AuthService {
         secureRandom.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(SESSION_DAYS);
-        jdbc.update("DELETE FROM auth_session WHERE expires_at <= NOW() OR account_id = ?", account.id());
+        deleteAccountSessions(account.id());
+        jdbc.update("DELETE FROM auth_session WHERE expires_at <= NOW()");
         jdbc.update("INSERT INTO auth_session(account_id, token_hash, expires_at) VALUES (?, ?, ?)",
                 account.id(), hash(token), expiresAt);
         return new AuthResponse(token, expiresAt, view(account));
@@ -208,6 +223,13 @@ public class AuthService {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(exception);
         }
+    }
+
+    private void deleteAccountSessions(Long accountId) {
+        List<String> tokenHashes = jdbc.queryForList(
+                "SELECT token_hash FROM auth_session WHERE account_id = ?", String.class, accountId);
+        jdbc.update("DELETE FROM auth_session WHERE account_id = ?", accountId);
+        sessionStore.evictAll(tokenHashes);
     }
 
     private static Long requiredKey(KeyHolder holder) {
@@ -236,5 +258,8 @@ public class AuthService {
     }
 
     private record AccountRow(AuthenticatedAccount account, String passwordHash, boolean enabled) {
+    }
+
+    private record SessionRow(AuthenticatedAccount account, LocalDateTime expiresAt) {
     }
 }

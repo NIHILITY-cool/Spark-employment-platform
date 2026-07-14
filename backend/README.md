@@ -11,6 +11,8 @@
 - MySQL 8.x
 - Redis
 
+Redis 用于加速登录会话校验，MySQL 仍保存完整会话记录；Redis 不可用时会自动回退到 MySQL。
+
 ## 启动
 
 ```bash
@@ -22,6 +24,8 @@ mvn spring-boot:run
 
 ```bash
 source ~/employment-platform/mysql.env
+export REDIS_HOST=127.0.0.1
+export REDIS_PORT=6379
 cd ~/employment-platform/backend
 mvn spring-boot:run
 ```
@@ -81,7 +85,7 @@ mysql -u root -p < ../database/schema.sql
 
 当前支持数据科学与大数据技术、计算机科学与技术、软件工程、统计学和人工智能五个专业方向。接口基于 Spark 清洗并写入 MySQL 的岗位数据做即席聚合，不使用毕业生去向数据，也不输出培养质量结论。
 
-认证仍未接入；项目、实习和获奖经历由学生自主维护，不使用未经授权的外部学生数据。
+学生、高校和管理员接口均已接入角色认证；项目、实习和获奖经历由学生自主维护，不使用未经授权的外部学生数据。
 
 ## 测试方法
 
