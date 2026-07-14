@@ -75,7 +75,7 @@ async function loadAnalysis(resetSkills = false) {
   } catch (cause) {
     console.warn('Training alignment fallback:', cause)
     analysis.value = demoTrainingAnalysis(major.value, city.value)
-    notice.value = '专业方向接口暂不可用，当前使用前端演示聚合；技能组合、地区矩阵和建议仍可继续验收。'
+    notice.value = '实时数据暂不可用，当前展示示例数据。'
     if (resetSkills || !selectedSkills.value.size) {
       const available = new Set(analysis.value.skills.map((item) => item.key))
       selectedSkills.value = new Set((presetSkills[major.value] || []).filter((item) => available.has(item)))
@@ -151,7 +151,7 @@ function demoTrainingAnalysis(majorName, cityName) {
       `优先评估 ${skills.slice(0, 3).map((item) => item.key).join('、')} 是否已覆盖在课程或项目训练中。`,
       cityName ? `${cityName} 的样本较少，建议结合周边省份或全国样本一起判断。` : '该方向岗位主要集中在北京、成都、上海，可作为校企合作区域参考。',
     ],
-    dataBasis: '前端演示聚合数据；后端连通后自动读取 Spark 清洗后写入 MySQL 的 2026-07-11 批次。仅反映近期市场需求，不代表培养质量或长期预测。',
+    dataBasis: '当前展示近期岗位需求，可按专业方向和地区进行比较。',
   }
 }
 

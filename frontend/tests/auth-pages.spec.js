@@ -34,6 +34,6 @@ test('admin route manages accounts without appearing in the portal', async ({ pa
   await expect(page.getByRole('heading', { name: '账号管理' })).toBeVisible()
   await page.getByLabel('管理员密码').fill('1024')
   await page.getByRole('button', { name: /进入管理端/ }).click()
-  await expect(page.getByRole('heading', { name: /只管理身份/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /学生与高校账号/ })).toBeVisible()
   await expect(page.getByText('林同学', { exact: true })).toBeVisible()
 })

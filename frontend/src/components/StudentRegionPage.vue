@@ -213,7 +213,7 @@ onBeforeUnmount(() => {
         </div>
         <div v-if="loading" class="student-region-loading">正在读取地区岗位数据…</div>
         <div ref="mapElement" class="student-region-map" aria-label="全国岗位地区分布地图"></div>
-        <p class="student-map-note"><MapPinned :size="15" />地图统计已将规范城市归入对应省份，省级地点和无法确认的地点不混入城市岗位。</p>
+        <p class="student-map-note"><MapPinned :size="15" />省份数据包含已确认归属的城市岗位。</p>
       </section>
 
       <aside class="student-region-decision">

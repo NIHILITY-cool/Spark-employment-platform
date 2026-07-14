@@ -54,7 +54,7 @@ onMounted(load)
 <template>
   <section class="student-insight-page">
     <header class="student-insight-intro">
-      <div><p class="eyebrow">学生当前状态 · 以最后保存为准</p><h2>把需要帮助的人，排在最前面。</h2><p>{{ report.dataBasis }}</p></div>
+      <div><p class="eyebrow">学生情况</p><h2>优先跟进需要帮助的学生</h2></div>
       <button type="button" title="刷新学生情况" :disabled="loading" @click="load"><RefreshCw :size="17" /></button>
     </header>
 

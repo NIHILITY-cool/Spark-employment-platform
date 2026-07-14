@@ -390,7 +390,7 @@ async function loadDashboard() {
     }
   } catch (cause) {
     dashboard.value = buildDemoDashboard(filters.value)
-    sourceNotice.value = '后端接口暂不可用，当前使用前端演示聚合；筛选、图表点击和指标切换仍可用于验收交互效果。'
+    sourceNotice.value = '实时数据暂不可用，当前展示示例数据。'
     console.warn('University dashboard fallback:', cause)
     if (!dashboardRetryTimer && dashboardRetryCount < 3) {
       dashboardRetryCount += 1
@@ -480,7 +480,7 @@ function buildDemoDashboard(filter) {
     provinceDemand: metrics(rows, (row) => row.province, provinceNames.length),
     suggestions: suggestionsFor(rows, categoryFamilies, cities, hotSkills),
     dataQuality: buildDemoQuality(total),
-    dataBasis: '前端演示聚合数据；后端连通后自动读取 Spark 清洗后写入 MySQL 的 2026-07-11 批次。',
+    dataBasis: '近期公开岗位，数据更新至 2026-07-11。',
   }
 }
 
@@ -1459,9 +1459,9 @@ onBeforeUnmount(() => {
   <section class="university-workspace university-dashboard">
     <header class="university-banner">
       <div class="university-banner-copy">
-        <p class="eyebrow">高校端 · 就业市场分析驾驶舱</p>
+        <p class="eyebrow">高校就业分析</p>
         <h1>用岗位数据支撑就业指导。</h1>
-        <p>围绕公开岗位样本展示市场需求、岗位大类、地区结构、薪资学历、技能信号和数据质量；不生成学生就业率或培养质量结论。</p>
+        <p>查看岗位趋势、地区结构和学生就业准备情况，快速定位就业支持重点。</p>
       </div>
       <div class="university-banner-actions">
         <button class="university-button" type="button" title="退出高校端" @click="emit('logout')"><LogOut :size="15" /><span>退出登录</span></button>
@@ -1712,7 +1712,7 @@ onBeforeUnmount(() => {
               </div>
               <div>
                 <span>资料补充口径</span>
-                <p>毕业生与待就业数据建议接教育厅、人社厅或学校就业系统，页面暂不伪造具体数字。</p>
+                <p>毕业生与待就业数据待接入校级就业系统。</p>
               </div>
             </div>
             <div class="region-note-grid">

@@ -111,9 +111,9 @@ onMounted(async () => {
   <main class="admin-shell">
     <section v-if="!authenticated" class="admin-login">
       <div class="admin-login-mark"><ShieldCheck :size="34" /></div>
-      <p class="eyebrow">Restricted administration</p>
+      <p class="eyebrow">管理员登录</p>
       <h1>账号管理</h1>
-      <p>此入口不出现在业务界面中。</p>
+      <p>登录后管理学生账号和高校端账号。</p>
       <form @submit.prevent="signIn">
         <label><span>管理员账号</span><input v-model="login.username" autocomplete="username" required /></label>
         <label><span>管理员密码</span><input v-model="login.password" type="password" autocomplete="current-password" required /></label>
@@ -129,7 +129,7 @@ onMounted(async () => {
       </header>
 
       <section class="admin-heading">
-        <div><p class="eyebrow">账号与访问控制</p><h1>只管理身份，不介入业务数据。</h1></div>
+        <div><p class="eyebrow">账号管理</p><h1>学生与高校账号</h1></div>
         <div class="admin-counts"><span>学生账号 <strong>{{ students.length }}</strong></span><span>已启用 <strong>{{ students.filter((item) => item.enabled).length }}</strong></span></div>
       </section>
 
@@ -158,7 +158,7 @@ onMounted(async () => {
             <label><span>新密码</span><input v-model="university.password" type="password" required minlength="6" maxlength="72" placeholder="输入新密码" /></label>
             <button type="submit" :disabled="loading">更新高校账号</button>
           </form>
-          <p>更新后，高校端现有登录会话会立即失效。</p>
+          <p>修改后，已登录的高校端需要重新登录。</p>
         </aside>
       </section>
 

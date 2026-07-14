@@ -50,10 +50,9 @@ async function submit() {
     <div class="auth-stage">
       <div class="auth-context" :class="isStudent ? 'student-auth-context' : 'university-auth-context'">
         <span class="auth-role-icon"><GraduationCap v-if="isStudent" :size="30" /><Building2 v-else :size="30" /></span>
-        <p class="eyebrow">{{ isStudent ? '学生端身份验证' : '高校端身份验证' }}</p>
-        <h1>{{ isStudent ? '让每次保存，成为下一次推荐的依据。' : '从学生的真实准备度，找到需要介入的地方。' }}</h1>
-        <p>{{ isStudent ? '登录后维护画像、经历与就业期望。高校端只读取你最后保存的状态。' : '高校统一账号由管理员维护，登录后可查看岗位市场和学生就业准备情况。' }}</p>
-        <div class="auth-context-line"><span>{{ isStudent ? '个人状态' : '数据边界' }}</span><strong>{{ isStudent ? '以最后保存为准' : '只读学生已保存信息' }}</strong></div>
+        <p class="eyebrow">{{ isStudent ? '学生登录' : '高校登录' }}</p>
+        <h1>{{ isStudent ? '继续完善你的求职准备' : '查看学生就业准备情况' }}</h1>
+        <p>{{ isStudent ? '维护个人画像与求职期望，查看岗位推荐和能力差距。' : '查看岗位市场、学生匹配情况和需要重点支持的学生。' }}</p>
       </div>
 
       <form class="auth-form" @submit.prevent="submit">

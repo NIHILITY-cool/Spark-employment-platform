@@ -18,9 +18,9 @@ const emit = defineEmits(['select-student', 'select-university'])
 
     <div class="role-landing-body">
       <div class="role-landing-intro">
-        <p class="eyebrow">请选择工作入口</p>
-        <h1 id="role-landing-title">从你的视角<br />进入就业现场。</h1>
-        <p>学生关注个人机会，高校关注培养与就业支持。选择身份并登录后进入对应工作台。</p>
+        <p class="eyebrow">工作台入口</p>
+        <h1 id="role-landing-title">选择你的<br />工作台</h1>
+        <p>查看个人岗位机会，或进入高校就业分析。</p>
       </div>
 
       <div class="role-cards" aria-label="工作台身份选择">
@@ -48,8 +48,8 @@ const emit = defineEmits(['select-student', 'select-university'])
 
     <footer class="role-landing-evidence" aria-label="当前数据概览">
       <div><Sparkles :size="17" /><span>近期公开岗位</span><strong>{{ jobCount }}</strong></div>
-      <div><ChartNoAxesCombined :size="17" /><span>Spark 处理链路</span><strong>已就绪</strong></div>
-      <div><GraduationCap :size="17" /><span>数据分析范围</span><strong>市场需求</strong></div>
+      <div><ChartNoAxesCombined :size="17" /><span>地区分析</span><strong>全国</strong></div>
+      <div><GraduationCap :size="17" /><span>求职支持</span><strong>画像与匹配</strong></div>
     </footer>
   </section>
 </template>

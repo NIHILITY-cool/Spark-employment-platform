@@ -349,10 +349,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
     <template v-if="view === 'market'">
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">高校智慧就业 · 实时岗位信号</p>
+        <p class="eyebrow">就业市场 · 近期岗位</p>
         <h1>找到下一份<br /><em>更合拍</em> 的工作</h1>
         <p class="hero-text">将你的能力、城市选择与真实市场需求放在同一张地图上，先看趋势，再做决定。</p>
-        <div class="hero-actions"><button class="primary-action" type="button" @click="showMarket('#jobs')">浏览岗位 <ArrowDown :size="16" /></button><span>来自 Spark 清洗后的三站岗位数据</span></div>
+        <div class="hero-actions"><button class="primary-action" type="button" @click="showMarket('#jobs')">浏览岗位 <ArrowDown :size="16" /></button><span>{{ headlineTotal }} 个近期岗位</span></div>
       </div>
       <div class="radar-card" aria-label="岗位市场雷达">
         <div class="radar-core"><strong>{{ headlineTotal }}</strong><small>已分析岗位</small></div>
@@ -365,7 +365,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
     </section>
 
     <section id="jobs" class="job-zone">
-      <div class="section-head"><div><p class="eyebrow">01 / 市场岗位</p><h2>从市场里挑选方向</h2></div><p>筛选条件来自你的偏好，而不是一份冷冰冰的岗位清单。</p></div>
+      <div class="section-head"><div><p class="eyebrow">市场岗位</p><h2>从市场里挑选方向</h2></div><p>按城市和岗位方向缩小范围。</p></div>
       <form class="filter-bar" @submit.prevent="search(1)">
         <label class="search-field"><Search :size="18" /><input v-model="keyword" placeholder="搜索岗位或公司" /></label>
         <SearchSelect v-model="city" class="filter-picker" label="搜索或选择城市" placeholder="搜索城市" empty-label="全部城市" :options="cityOptions" />
@@ -373,7 +373,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
         <button class="search-button" type="submit">更新结果</button><button class="reset-button" type="button" @click="reset">重置</button>
       </form>
       <p v-if="message" class="notice">{{ message }}</p>
-      <div class="result-caption"><span>{{ loading ? '正在读取岗位…' : `发现 ${total.toLocaleString()} 个岗位机会` }}</span><span>{{ usingDemo ? 'DEMO MODE' : 'LIVE FROM MYSQL' }}</span></div>
+      <div class="result-caption"><span>{{ loading ? '正在读取岗位…' : `发现 ${total.toLocaleString()} 个岗位机会` }}</span><span>{{ usingDemo ? '示例数据' : '当前筛选' }}</span></div>
       <div class="job-grid">
         <article v-for="job in jobs" :key="job.jobKey" class="job-card job-card-clickable" role="button" tabindex="0" :aria-label="`查看${job.jobName}岗位详情`" @click="openJobDetail(job)" @keydown.enter="openJobDetail(job)" @keydown.space.prevent="openJobDetail(job)">
           <div class="card-top"><span class="category-tag">{{ job.jobCategory || '其他' }}</span><button type="button" :class="{ saved: favorites.has(job.jobKey) }" :aria-label="favorites.has(job.jobKey) ? '取消收藏岗位' : '收藏岗位'" :aria-pressed="favorites.has(job.jobKey)" :title="favorites.has(job.jobKey) ? '取消收藏' : '收藏岗位'" @click.stop="toggleFavorite(job.jobKey)"><Heart :size="18" :fill="favorites.has(job.jobKey) ? 'currentColor' : 'none'" /></button></div>
@@ -402,7 +402,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
           <div>
             <p class="eyebrow">市场技能信号 · 近期公开岗位</p>
             <h1>把市场语言<br />拆成可行动的技能。</h1>
-            <p>岗位提及次数来自 Spark 清洗后的近期公开岗位。它适合帮助学生校准学习优先级，不代表单项技能即可获得岗位。</p>
+            <p>比较近期岗位中的技能需求，确定更值得优先投入的学习方向。</p>
           </div>
           <div class="skills-highlights" aria-label="技能信号摘要">
             <div><span>高频技能</span><strong>{{ skillSignals[0]?.name || '暂无' }}</strong></div>
