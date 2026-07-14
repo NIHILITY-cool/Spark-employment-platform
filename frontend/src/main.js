@@ -7,6 +7,7 @@ import './university.css'
 import './role-landing.css'
 import './search-select.css'
 import './skills-page.css'
+import './student-region.css'
 import './pagination.css'
 import './job-detail.css'
 

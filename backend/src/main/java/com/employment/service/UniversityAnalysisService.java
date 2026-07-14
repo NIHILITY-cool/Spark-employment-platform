@@ -62,14 +62,16 @@ public class UniversityAnalysisService {
         String category = trim(requestedCategory);
         String companyScale = trim(requestedCompanyScale);
         String keyword = trim(requestedKeyword);
+        boolean provinceFilter = LocationScope.isProvince(city);
         MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("city", city).addValue("industry", industry).addValue("education", education)
                 .addValue("category", category).addValue("companyScale", companyScale)
                 .addValue("keyword", keyword).addValue("keywordLike", "%" + keyword + "%")
                 .addValue("minSalary", minSalary).addValue("maxSalary", maxSalary)
+                .addValue("provinceCities", LocationScope.citiesForProvince(city))
                 .addValue("provinceLevelLocations", LocationScope.provinceLevelLocations());
         String filter = dashboardFilter(city, industry, education, category, companyScale, keyword,
-                minSalary, maxSalary);
+                minSalary, maxSalary, provinceFilter);
 
         Map<String, Object> summaryRow = jdbc.queryForMap("""
                 SELECT COUNT(*) AS job_count,
@@ -105,6 +107,7 @@ public class UniversityAnalysisService {
                   AND j.city <> '' AND j.city NOT IN (:provinceLevelLocations)
                 GROUP BY j.city ORDER BY job_count DESC, dimension_key LIMIT 20
                 """, parameters);
+        List<DemandMetric> provinceDemand = provinceDemand(filter, parameters);
         List<DemandMetric> industries = metrics("""
                 SELECT COALESCE(NULLIF(j.industry, ''), '未标注') AS dimension_key, COUNT(*) AS job_count,
                        ROUND(AVG(j.salary_min), 0) AS average_salary_min,
@@ -150,7 +153,7 @@ public class UniversityAnalysisService {
         return new UniversityMarketDashboardResponse(batchDate,
                 new UniversityDashboardFilter(city, industry, education, category, companyScale,
                         keyword, minSalary, maxSalary),
-                summary, cities, industries, educationItems, companyScales, jobCategories, hotJobs, hotSkills,
+                summary, provinceDemand, cities, industries, educationItems, companyScales, jobCategories, hotJobs, hotSkills,
                 salaryBuckets, categoryFamilies, regionalCategoryShares, cityIndustryHeatmap,
                 dashboardSuggestions(summary, categoryFamilies, cities, hotSkills), dataQuality,
                 "基于 Spark 清洗后写入 MySQL 的 " + batchDate
@@ -285,9 +288,12 @@ public class UniversityAnalysisService {
     }
 
     private String dashboardFilter(String city, String industry, String education, String category,
-                                   String companyScale, String keyword, Integer minSalary, Integer maxSalary) {
+                                   String companyScale, String keyword, Integer minSalary, Integer maxSalary,
+                                   boolean provinceFilter) {
         StringBuilder filter = new StringBuilder(" WHERE j.job_status = 'active' ");
-        if (StringUtils.hasText(city)) filter.append(" AND j.city = :city ");
+        if (StringUtils.hasText(city)) {
+            filter.append(provinceFilter ? " AND j.city IN (:provinceCities) " : " AND j.city = :city ");
+        }
         if (StringUtils.hasText(industry)) filter.append(" AND j.industry = :industry ");
         if (StringUtils.hasText(education)) filter.append(" AND j.education_requirement = :education ");
         if (StringUtils.hasText(category)) filter.append(" AND j.job_category = :category ");
@@ -299,6 +305,28 @@ public class UniversityAnalysisService {
         if (minSalary != null) filter.append(" AND j.salary_max >= :minSalary ");
         if (maxSalary != null) filter.append(" AND j.salary_min <= :maxSalary ");
         return filter.toString();
+    }
+
+    private List<DemandMetric> provinceDemand(String filter, MapSqlParameterSource parameters) {
+        List<DemandMetric> cities = metrics("""
+                SELECT j.city AS dimension_key, COUNT(*) AS job_count,
+                       ROUND(AVG(j.salary_min), 0) AS average_salary_min,
+                       ROUND(AVG(j.salary_max), 0) AS average_salary_max
+                FROM job j
+                """ + filter + """
+                  AND j.city <> ''
+                GROUP BY j.city
+                """, parameters);
+        Map<String, ProvinceAccumulator> grouped = new LinkedHashMap<>();
+        for (DemandMetric city : cities) {
+            String province = LocationScope.provinceOf(city.key());
+            if (!StringUtils.hasText(province)) continue;
+            grouped.computeIfAbsent(province, ignored -> new ProvinceAccumulator()).add(city);
+        }
+        return grouped.entrySet().stream()
+                .map(entry -> entry.getValue().metric(entry.getKey()))
+                .sorted((left, right) -> Long.compare(right.jobCount(), left.jobCount()))
+                .toList();
     }
 
     private Double queryMedianSalary(String filter, MapSqlParameterSource parameters) {
@@ -378,25 +406,27 @@ public class UniversityAnalysisService {
                        COUNT(*) AS job_count
                 FROM job j
                 """ + filter + """
-                  AND j.city <> '' AND j.city NOT IN (:provinceLevelLocations)
+                  AND j.city <> ''
                 GROUP BY j.city, category, j.job_name
                 """, parameters, (rs, rowNum) -> new RegionalRawRow(rs.getString("city"),
                 rs.getString("category"), rs.getString("job_name"), rs.getLong("job_count")));
         Map<String, Map<String, Long>> grouped = new LinkedHashMap<>();
         Map<String, Long> totals = new LinkedHashMap<>();
         for (RegionalRawRow row : rows) {
+            String province = LocationScope.provinceOf(row.city());
+            if (!StringUtils.hasText(province)) continue;
             String family = categoryFamily(row.category(), row.jobName());
-            Map<String, Long> familyCounts = grouped.computeIfAbsent(row.city(), ignored -> new LinkedHashMap<>());
+            Map<String, Long> familyCounts = grouped.computeIfAbsent(province, ignored -> new LinkedHashMap<>());
             familyCounts.put(family, familyCounts.getOrDefault(family, 0L) + row.jobCount());
-            totals.put(row.city(), totals.getOrDefault(row.city(), 0L) + row.jobCount());
+            totals.put(province, totals.getOrDefault(province, 0L) + row.jobCount());
         }
         List<RegionalCategoryShare> result = new ArrayList<>();
-        List<String> topCities = totals.entrySet().stream()
+        List<String> provinces = totals.entrySet().stream()
                 .sorted((left, right) -> Long.compare(right.getValue(), left.getValue()))
-                .limit(4).map(Map.Entry::getKey).toList();
-        for (String city : topCities) {
-            Map<String, Long> familyCounts = grouped.getOrDefault(city, Map.of());
-            result.add(new RegionalCategoryShare(city, totals.getOrDefault(city, 0L),
+                .map(Map.Entry::getKey).toList();
+        for (String province : provinces) {
+            Map<String, Long> familyCounts = grouped.getOrDefault(province, Map.of());
+            result.add(new RegionalCategoryShare(province, totals.getOrDefault(province, 0L),
                     categoryShares(familyCounts)));
         }
         return result;
@@ -409,23 +439,29 @@ public class UniversityAnalysisService {
                        COUNT(*) AS job_count
                 FROM job j
                 """ + filter + """
-                  AND j.city <> '' AND j.city NOT IN (:provinceLevelLocations)
+                  AND j.city <> ''
                 GROUP BY j.city, industry
                 """, parameters, (rs, rowNum) -> new HeatmapCell(rs.getString("city"),
                 rs.getString("industry"), rs.getLong("job_count")));
-        Map<String, Long> cityTotals = new LinkedHashMap<>();
+        Map<String, Long> grouped = new LinkedHashMap<>();
         Map<String, Long> industryTotals = new LinkedHashMap<>();
         for (HeatmapCell row : rows) {
-            cityTotals.put(row.x(), cityTotals.getOrDefault(row.x(), 0L) + row.jobCount());
+            String province = LocationScope.provinceOf(row.x());
+            if (!StringUtils.hasText(province)) continue;
+            String key = province + "::" + row.y();
+            grouped.put(key, grouped.getOrDefault(key, 0L) + row.jobCount());
             industryTotals.put(row.y(), industryTotals.getOrDefault(row.y(), 0L) + row.jobCount());
         }
-        List<String> topCities = topKeys(cityTotals, 6);
-        List<String> topIndustries = topKeys(industryTotals, 6);
-        return rows.stream()
-                .filter(row -> topCities.contains(row.x()) && topIndustries.contains(row.y()))
+        List<String> topIndustries = topKeys(industryTotals, 12);
+        return grouped.entrySet().stream()
+                .map(entry -> {
+                    String[] parts = entry.getKey().split("::", 2);
+                    return new HeatmapCell(parts[0], parts[1], entry.getValue());
+                })
+                .filter(row -> topIndustries.contains(row.y()))
                 .sorted((left, right) -> {
-                    int cityCompare = left.x().compareTo(right.x());
-                    return cityCompare != 0 ? cityCompare : left.y().compareTo(right.y());
+                    int provinceCompare = left.x().compareTo(right.x());
+                    return provinceCompare != 0 ? provinceCompare : left.y().compareTo(right.y());
                 })
                 .toList();
     }
@@ -556,7 +592,8 @@ public class UniversityAnalysisService {
                         keyword, minSalary, maxSalary))
                 .toList();
         long jobCount = demoSum(rows);
-        List<DemandMetric> cities = demoMetrics(rows, DemoJobRow::province, 20);
+        List<DemandMetric> provinceDemand = demoMetrics(rows, DemoJobRow::province, 34);
+        List<DemandMetric> cities = demoMetrics(rows, DemoJobRow::city, 20);
         List<DemandMetric> industries = demoMetrics(rows, DemoJobRow::industry, 20);
         List<DemandMetric> educationItems = demoMetrics(rows, DemoJobRow::education, 20);
         List<DemandMetric> companyScales = demoMetrics(rows, DemoJobRow::companyScale, 20);
@@ -573,7 +610,7 @@ public class UniversityAnalysisService {
         return new UniversityMarketDashboardResponse(DEMO_BATCH_DATE,
                 new UniversityDashboardFilter(city, industry, education, category, companyScale,
                         keyword, minSalary, maxSalary),
-                summary, cities, industries, educationItems, companyScales, jobCategories, hotJobs, hotSkills,
+                summary, provinceDemand, cities, industries, educationItems, companyScales, jobCategories, hotJobs, hotSkills,
                 demoSalaryBuckets(rows), categoryFamilies, demoRegionalShares(rows), demoHeatmap(rows),
                 dashboardSuggestions(summary, categoryFamilies, cities, hotSkills), demoQuality(jobCount),
                 "后端演示聚合数据：数据库或 SQL 暂不可用时由 Spring Boot 返回，接口仍保持 200；连接 MySQL 后会自动切换为真实岗位聚合。");
@@ -1002,6 +1039,32 @@ public class UniversityAnalysisService {
     private record DemoJobRow(String jobName, String companyName, String city, String province,
                               String industry, String education, String category, String companyScale,
                               int salaryMin, int salaryMax, List<String> skills, long count) {
+    }
+
+    private static final class ProvinceAccumulator {
+        private long jobCount;
+        private long salaryMinWeight;
+        private long salaryMaxWeight;
+        private double salaryMinTotal;
+        private double salaryMaxTotal;
+
+        private void add(DemandMetric city) {
+            jobCount += city.jobCount();
+            if (city.averageSalaryMin() != null) {
+                salaryMinTotal += city.averageSalaryMin() * city.jobCount();
+                salaryMinWeight += city.jobCount();
+            }
+            if (city.averageSalaryMax() != null) {
+                salaryMaxTotal += city.averageSalaryMax() * city.jobCount();
+                salaryMaxWeight += city.jobCount();
+            }
+        }
+
+        private DemandMetric metric(String province) {
+            Double averageMin = salaryMinWeight == 0 ? null : Math.round(salaryMinTotal / salaryMinWeight * 100.0) / 100.0;
+            Double averageMax = salaryMaxWeight == 0 ? null : Math.round(salaryMaxTotal / salaryMaxWeight * 100.0) / 100.0;
+            return new DemandMetric(province, jobCount, averageMin, averageMax);
+        }
     }
 
     private static final class DemoMetricAccumulator {

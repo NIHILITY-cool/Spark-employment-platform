@@ -30,6 +30,7 @@ const dashboard = {
   statDate: '2026-07-11',
   filter: {},
   summary: { jobCount: 12000, companyCount: 7300, cityCount: 86, industryCount: 42, averageSalary: 8840, medianSalary: 7600, maxSalary: 45000, entryFriendlyCount: 8300, skillJobCount: 2505 },
+  provinceDemand: [{ key: '北京', jobCount: 722, averageSalaryMin: 9800, averageSalaryMax: 16000 }, { key: '四川', jobCount: 705, averageSalaryMin: 7600, averageSalaryMax: 12800 }],
   cities: [{ key: '北京', jobCount: 722, averageSalaryMin: 9800, averageSalaryMax: 16000 }, { key: '成都', jobCount: 705, averageSalaryMin: 7600, averageSalaryMax: 12800 }],
   industries: [{ key: '计算机软件', jobCount: 645 }, { key: '教育/培训/院校', jobCount: 1045 }],
   education: [{ key: '本科及以上', jobCount: 4194 }, { key: '专科及以上', jobCount: 4651 }],

@@ -1,12 +1,13 @@
 <script setup>
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ArrowDown, ArrowRight, ChartNoAxesCombined, ChevronLeft, ChevronRight, Clock3, Crosshair, GraduationCap, Heart, Home, MapPin, Search, Sparkles, UserRound } from '@lucide/vue'
+import { ArrowDown, ArrowRight, ChevronLeft, ChevronRight, Clock3, Crosshair, GraduationCap, Heart, Home, MapPin, Search, Sparkles, UserRound } from '@lucide/vue'
 import RoleLanding from './components/RoleLanding.vue'
 import SearchSelect from './components/SearchSelect.vue'
 import StudentWorkspace from './components/StudentWorkspace.vue'
 import JobDetailDrawer from './components/JobDetailDrawer.vue'
 
 const UniversityWorkspace = defineAsyncComponent(() => import('./components/UniversityWorkspace.vue'))
+const StudentRegionPage = defineAsyncComponent(() => import('./components/StudentRegionPage.vue'))
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
 const loading = ref(false)
@@ -18,7 +19,6 @@ const category = ref('')
 const jobs = ref([])
 const total = ref(0)
 const jobPage = ref(1)
-const cityStats = ref([])
 const hotSkills = ref([])
 const cityOptions = ref([])
 const categoryOptions = ref([])
@@ -71,17 +71,6 @@ function normalizeCity(value) {
   return normalized === '中国' ? '全国' : normalized
 }
 
-function mergeCityStats(items) {
-  const totals = new Map()
-  for (const item of items) {
-    const name = normalizeCity(item.dimensionKey)
-    if (name) totals.set(name, (totals.get(name) || 0) + Number(item.metricValue || 0))
-  }
-  return [...totals.entries()]
-    .map(([dimensionKey, metricValue]) => ({ dimensionKey, metricValue }))
-    .sort((a, b) => b.metricValue - a.metricValue || a.dimensionKey.localeCompare(b.dimensionKey, 'zh-CN'))
-}
-
 function pageItems(current, count) {
   if (count <= 7) return Array.from({ length: count }, (_, index) => index + 1)
   if (current <= 4) return [1, 2, 3, 4, 5, 'ellipsis-right', count]
@@ -91,19 +80,11 @@ function pageItems(current, count) {
 
 async function loadMarket() {
   try {
-    const [cityResponse, skillResponse] = await Promise.all([
-      fetch(`${apiBase}/market/statistics/city_distribution`),
-      fetch(`${apiBase}/market/statistics/hot_skills`),
-    ])
-    if (!cityResponse.ok || !skillResponse.ok) throw new Error('market unavailable')
-    cityStats.value = mergeCityStats(await cityResponse.json())
+    const skillResponse = await fetch(`${apiBase}/market/statistics/hot_skills`)
+    if (!skillResponse.ok) throw new Error('market unavailable')
     hotSkills.value = await skillResponse.json()
     if (!selectedSkill.value || !hotSkills.value.some((item) => item.dimensionKey === selectedSkill.value)) selectedSkill.value = hotSkills.value[0]?.dimensionKey || ''
   } catch {
-    cityStats.value = [
-      { dimensionKey: '成都', metricValue: 1255 }, { dimensionKey: '北京', metricValue: 722 },
-      { dimensionKey: '上海', metricValue: 745 }, { dimensionKey: '重庆', metricValue: 177 },
-    ]
     hotSkills.value = [
       { dimensionKey: 'Python', metricValue: 841 }, { dimensionKey: 'Java', metricValue: 782 },
       { dimensionKey: 'SQL', metricValue: 669 }, { dimensionKey: 'Spark', metricValue: 315 },
@@ -207,6 +188,20 @@ function showSkills() {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+function showRegions() {
+  view.value = 'regions'
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function browseCityJobs(cityName) {
+  city.value = cityName
+  view.value = 'market'
+  nextTick(() => {
+    search(1)
+    document.querySelector('#jobs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
 function toggleFavorite(jobKey) {
   const next = new Set(favorites.value)
   if (next.has(jobKey)) next.delete(jobKey)
@@ -262,6 +257,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
       </button>
       <nav>
         <button :class="{ active: view === 'market' }" type="button" @click="showMarket('#jobs')">岗位市场</button>
+        <button :class="{ active: view === 'regions' }" type="button" @click="showRegions">地区分布</button>
         <button :class="{ active: view === 'skills' }" type="button" @click="showSkills">技能信号</button>
         <button :class="{ active: view === 'student' }" type="button" @click="openStudent('profile')">我的画像</button>
       </nav>
@@ -272,6 +268,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
     </header>
     <div class="student-mobile-nav" role="tablist" aria-label="学生端页面">
       <button :class="{ active: view === 'market' }" type="button" role="tab" :aria-selected="view === 'market'" @click="showMarket()">岗位市场</button>
+      <button :class="{ active: view === 'regions' }" type="button" role="tab" :aria-selected="view === 'regions'" @click="showRegions">地区分布</button>
       <button :class="{ active: view === 'skills' }" type="button" role="tab" :aria-selected="view === 'skills'" @click="showSkills">技能信号</button>
       <button :class="{ active: view === 'student' }" type="button" role="tab" :aria-selected="view === 'student'" @click="openStudent('profile')">我的画像</button>
     </div>
@@ -369,14 +366,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
           </aside>
         </div>
 
-        <section class="city-demand-section">
-          <div class="skills-page-head"><div><p class="eyebrow">区域机会</p><h2>城市岗位热度</h2></div><span><ChartNoAxesCombined :size="15" />按近期岗位样本排序</span></div>
-          <div class="city-demand-list">
-            <div v-for="(item, index) in cityStats.slice(0, 8)" :key="item.dimensionKey"><b>{{ String(index + 1).padStart(2, '0') }}</b><strong>{{ item.dimensionKey }}</strong><span>{{ Number(item.metricValue).toLocaleString() }} 个岗位</span></div>
-          </div>
-        </section>
       </section>
     </template>
+
+    <StudentRegionPage v-else-if="view === 'regions'" :api-base="apiBase" @browse-city="browseCityJobs" />
 
     <StudentWorkspace v-else :api-base="apiBase" :student-id="1" :city-options="cityOptions" :category-options="categoryOptions" :initial-tab="studentTab" @back-to-market="showMarket()" />
     </template>

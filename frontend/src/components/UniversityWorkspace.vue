@@ -245,16 +245,6 @@ const provinceNames = [
   '澳门', '台湾',
 ]
 
-const cityProvinceMap = {
-  北京: '北京', 天津: '天津', 上海: '上海', 重庆: '重庆', 石家庄: '河北', 太原: '山西', 呼和浩特: '内蒙古',
-  沈阳: '辽宁', 大连: '辽宁', 长春: '吉林', 哈尔滨: '黑龙江', 南京: '江苏', 苏州: '江苏', 无锡: '江苏',
-  杭州: '浙江', 宁波: '浙江', 合肥: '安徽', 福州: '福建', 厦门: '福建', 南昌: '江西', 济南: '山东',
-  青岛: '山东', 郑州: '河南', 武汉: '湖北', 长沙: '湖南', 广州: '广东', 深圳: '广东', 东莞: '广东',
-  南宁: '广西', 海口: '海南', 成都: '四川', 绵阳: '四川', 贵阳: '贵州', 昆明: '云南', 拉萨: '西藏',
-  西安: '陕西', 兰州: '甘肃', 西宁: '青海', 银川: '宁夏', 乌鲁木齐: '新疆', 香港: '香港', 澳门: '澳门',
-  台湾: '台湾', 台北: '台湾', 高雄: '台湾',
-}
-
 const standardIndustries = [
   '信息技术', '教育培训', '智能制造', '电子通信', '金融财会', '建筑地产', '医药健康',
   '批发零售', '文化传媒', '交通物流', '能源化工', '农林牧渔', '公共服务', '生活服务', '其他',
@@ -348,9 +338,9 @@ const qualityScore = computed(() => {
   return Math.max(0, Math.round(100 - averageMissing))
 })
 const selectedQualityItem = computed(() => (current.value.dataQuality?.missingFields || []).find((item) => item.key === selectedQualityKey.value) || current.value.dataQuality?.missingFields?.[0])
-const selectedProvinceRegion = computed(() => (current.value.regionalCategoryShares || []).find((item) => provinceOf(item.city) === selectedProvinceCell.value?.name))
+const selectedProvinceRegion = computed(() => (current.value.regionalCategoryShares || []).find((item) => item.city === selectedProvinceCell.value?.name))
 const selectedProvinceIndustries = computed(() => (current.value.cityIndustryHeatmap || [])
-  .filter((item) => provinceOf(item.x) === selectedProvinceCell.value?.name)
+  .filter((item) => item.x === selectedProvinceCell.value?.name)
   .sort((left, right) => Number(right.jobCount || 0) - Number(left.jobCount || 0))
   .slice(0, 4))
 const selectedProvinceCategories = computed(() => selectedProvinceRegion.value?.categories?.length
@@ -427,6 +417,11 @@ function clearFilter(key) {
   loadDashboard()
 }
 
+function drillIntoCity(city) {
+  filters.value.city = city
+  loadDashboard()
+}
+
 function syncSelections() {
   selectedFamily.value = selectedFamilyMetric.value?.family || '技术研发'
   selectedJob.value = selectedJobMetric.value?.key || ''
@@ -445,7 +440,7 @@ function buildDemoDashboard(filter) {
   const cityCount = unique(rows.map((row) => row.province)).length
   const skillJobCount = sum(rows.filter((row) => row.skills.length), (row) => row.count)
   const categoryFamilies = buildCategoryFamilies(rows)
-  const cities = metrics(rows, (row) => row.province, 20)
+  const cities = metrics(rows, (row) => row.city, 20)
   const industries = metrics(rows, (row) => row.industry, 20)
   const education = metrics(rows, (row) => row.education, 20)
   const companyScales = metrics(rows, (row) => row.companyScale, 20)
@@ -490,6 +485,7 @@ function buildDemoDashboard(filter) {
 function normalizeDashboard(payload) {
   return {
     ...payload,
+    provinceDemand: payload.provinceDemand || [],
     categoryFamilies: payload.categoryFamilies || [],
     regionalCategoryShares: payload.regionalCategoryShares || [],
     cityIndustryHeatmap: payload.cityIndustryHeatmap || [],
@@ -663,7 +659,7 @@ function containsAny(value, keywords) {
 function provinceOf(value) {
   const name = String(value || '').replace(/市+$/, '').trim()
   if (provinceNames.includes(name)) return name
-  return cityProvinceMap[name] || name
+  return name
 }
 
 function provinceMetricValue(item) {
@@ -751,11 +747,11 @@ function renderChinaMap() {
 
 function mapTooltip(item) {
   const industries = (current.value.cityIndustryHeatmap || [])
-    .filter((entry) => provinceOf(entry.x) === item.name)
+    .filter((entry) => entry.x === item.name)
     .sort((left, right) => Number(right.jobCount || 0) - Number(left.jobCount || 0))
     .slice(0, 3)
   const categories = (current.value.regionalCategoryShares || [])
-    .find((entry) => provinceOf(entry.city) === item.name)?.categories?.slice(0, 3) || []
+    .find((entry) => entry.city === item.name)?.categories?.slice(0, 3) || []
   return `
     <div class="map-tooltip">
       <strong>${item.name}</strong>
@@ -1557,7 +1553,7 @@ onBeforeUnmount(() => {
         <div class="dashboard-panel">
           <div class="university-section-head"><div><p class="eyebrow">热门地区</p><h2>岗位集中地区</h2></div></div>
           <ol class="metric-list interactive">
-            <li v-for="item in current.cities.slice(0, 8)" :key="item.key"><button type="button" @click="selectedProvince = provinceOf(item.key)"><b>{{ item.key }}</b><i><em :style="{ width: widthFor(item.jobCount, current.cities) }"></em></i><strong>{{ formatNumber(item.jobCount) }}</strong></button></li>
+            <li v-for="item in current.cities.slice(0, 8)" :key="item.key"><button type="button" @click="drillIntoCity(item.key)"><b>{{ item.key }}</b><i><em :style="{ width: widthFor(item.jobCount, current.cities) }"></em></i><strong>{{ formatNumber(item.jobCount) }}</strong></button></li>
           </ol>
         </div>
         <div class="dashboard-panel">
@@ -1788,7 +1784,7 @@ onBeforeUnmount(() => {
             <li v-for="item in current.hotSkills.slice(0, 10)" :key="item.key"><button type="button" :class="{ active: selectedSkillMetric?.key === item.key }" @click="selectedSkill = item.key"><b>{{ item.key }}</b><i><em :style="{ width: widthFor(item.jobCount, current.hotSkills) }"></em></i><strong>{{ formatNumber(item.jobCount) }}</strong></button></li>
           </ol>
           <ol v-else class="metric-list interactive">
-            <li v-for="item in current.cities.slice(0, 8)" :key="item.key"><button type="button" @click="selectedProvince = provinceOf(item.key)"><b>{{ item.key }}</b><i><em :style="{ width: widthFor(item.jobCount, current.cities) }"></em></i><strong>{{ salaryRange(item) }}</strong></button></li>
+            <li v-for="item in current.cities.slice(0, 8)" :key="item.key"><button type="button" @click="drillIntoCity(item.key)"><b>{{ item.key }}</b><i><em :style="{ width: widthFor(item.jobCount, current.cities) }"></em></i><strong>{{ salaryRange(item) }}</strong></button></li>
           </ol>
         </div>
         <div class="dashboard-panel">

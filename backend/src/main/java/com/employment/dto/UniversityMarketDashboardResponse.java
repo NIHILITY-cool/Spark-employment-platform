@@ -5,6 +5,7 @@ import java.util.List;
 
 public record UniversityMarketDashboardResponse(LocalDate statDate, UniversityDashboardFilter filter,
                                                 UniversityMarketSummary summary,
+                                                List<DemandMetric> provinceDemand,
                                                 List<DemandMetric> cities,
                                                 List<DemandMetric> industries,
                                                 List<DemandMetric> education,

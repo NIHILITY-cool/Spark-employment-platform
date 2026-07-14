@@ -1,6 +1,9 @@
 package com.employment.common;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public final class LocationScope {
@@ -10,37 +13,9 @@ public final class LocationScope {
             "四川", "西藏", "新疆", "云南", "浙江", "香港", "澳门", "台湾", "全国", "地点待定");
 
     // Must stay aligned with data_processing/location_normalization.py.
-    private static final Set<String> CANONICAL_CITIES = Set.copyOf(Arrays.asList("""
-            北京 天津 上海 重庆
-            石家庄 唐山 秦皇岛 邯郸 邢台 保定 张家口 承德 沧州 廊坊 衡水 定州 辛集
-            太原 大同 阳泉 长治 晋城 朔州 晋中 运城 忻州 临汾 吕梁 古交
-            呼和浩特 包头 乌海 赤峰 通辽 鄂尔多斯 呼伦贝尔 巴彦淖尔 乌兰察布 霍林郭勒 满洲里 牙克石 扎兰屯 根河 额尔古纳 丰镇
-            沈阳 大连 鞍山 抚顺 本溪 丹东 锦州 营口 阜新 辽阳 盘锦 铁岭 朝阳 葫芦岛
-            长春 吉林 四平 辽源 通化 白山 松原 白城 延边 珲春
-            哈尔滨 齐齐哈尔 鸡西 鹤岗 双鸭山 大庆 伊春 佳木斯 七台河 牡丹江 黑河 绥化 北安 五大连池 密山 虎林 铁力 同江 富锦 绥芬河 海林 宁安 穆棱 东宁 抚远 尚志 五常 讷河 安达 肇东 海伦
-            南京 无锡 徐州 常州 苏州 南通 连云港 淮安 盐城 扬州 镇江 泰州 宿迁 昆山 江阴 宜兴 张家港 常熟 太仓 溧阳 扬中 句容 丹阳 高邮 仪征 兴化 靖江 泰兴 如皋 启东 海安 东台 邳州 新沂
-            杭州 宁波 温州 嘉兴 湖州 绍兴 金华 衢州 舟山 台州 丽水 建德 慈溪 余姚 平湖 海宁 桐乡 诸暨 嵊州 兰溪 义乌 东阳 永康 江山 临海 温岭 龙泉
-            合肥 芜湖 蚌埠 淮南 马鞍山 淮北 铜陵 安庆 黄山 滁州 阜阳 宿州 六安 亳州 池州 宣城 桐城 潜山 界首 天长 明光
-            福州 厦门 莆田 三明 泉州 漳州 南平 龙岩 宁德 福清 长乐 永安 石狮 晋江 南安 龙海 漳平 福安 福鼎 邵武 武夷山 建瓯 建阳
-            南昌 景德镇 萍乡 九江 新余 鹰潭 赣州 吉安 宜春 抚州 上饶 瑞昌 共青城 庐山 乐平 瑞金 龙南 井冈山 丰城 樟树 高安 贵溪 德兴
-            济南 青岛 淄博 枣庄 东营 烟台 潍坊 济宁 泰安 威海 日照 临沂 德州 聊城 滨州 菏泽 胶州 平度 莱西 滕州 龙口 莱阳 莱州 蓬莱 招远 栖霞 海阳 青州 诸城 寿光 安丘 高密 昌邑 曲阜 邹城 新泰 肥城 荣成 乳山 乐陵 禹城 临清
-            郑州 开封 洛阳 平顶山 安阳 鹤壁 新乡 焦作 濮阳 许昌 漯河 三门峡 南阳 商丘 信阳 周口 驻马店 济源 巩义 荥阳 新密 新郑 登封 偃师 孟州 沁阳 卫辉 辉县 长垣 林州 禹州 长葛 义马 灵宝 邓州 永城 汝州 项城
-            武汉 黄石 十堰 宜昌 襄阳 鄂州 荆门 孝感 荆州 黄冈 咸宁 随州 恩施 仙桃 潜江 天门 丹江口 宜都 当阳 枝江 老河口 枣阳 宜城 钟祥 应城 安陆 汉川 石首 洪湖 松滋 麻城 武穴 赤壁 广水 利川
-            长沙 株洲 湘潭 衡阳 邵阳 岳阳 常德 张家界 益阳 郴州 永州 怀化 娄底 湘西 浏阳 宁乡 醴陵 湘乡 韶山 耒阳 常宁 武冈 汨罗 临湘 津市 沅江 资兴 洪江 冷水江 涟源 吉首
-            广州 韶关 深圳 珠海 汕头 佛山 江门 湛江 茂名 肇庆 惠州 梅州 汕尾 河源 阳江 清远 东莞 中山 潮州 揭阳 云浮 乐昌 南雄 台山 开平 鹤山 恩平 廉江 雷州 吴川 高州 化州 信宜 四会 兴宁 陆丰 阳春 英德 连州 普宁 罗定
-            南宁 柳州 桂林 梧州 北海 防城港 钦州 贵港 玉林 百色 贺州 河池 来宾 崇左 岑溪 东兴 桂平 北流 宜州 合山 凭祥
-            海口 三亚 三沙 儋州 五指山 琼海 文昌 万宁 东方
-            成都 自贡 攀枝花 泸州 德阳 绵阳 广元 遂宁 内江 乐山 南充 眉山 宜宾 广安 达州 雅安 巴中 资阳 阿坝 甘孜 凉山 都江堰 彭州 邛崃 崇州 简阳 江油 广汉 什邡 绵竹 阆中 华蓥 万源 西昌 康定 马尔康
-            贵阳 六盘水 遵义 安顺 毕节 铜仁 黔西南 黔东南 黔南 清镇 赤水 仁怀 凯里 都匀 福泉 兴义 兴仁
-            昆明 曲靖 玉溪 保山 昭通 丽江 普洱 临沧 楚雄 红河 文山 西双版纳 大理 德宏 怒江 迪庆 安宁 宣威 腾冲 水富 个旧 开远 蒙自 弥勒 景洪 瑞丽 芒市
-            拉萨 日喀则 昌都 林芝 山南 那曲
-            西安 铜川 宝鸡 咸阳 渭南 延安 汉中 榆林 安康 商洛 兴平 韩城 华阴
-            兰州 嘉峪关 金昌 白银 天水 武威 张掖 平凉 酒泉 庆阳 定西 陇南 临夏 甘南 玉门 敦煌
-            西宁 海东
-            银川 石嘴山 吴忠 固原 中卫 灵武 青铜峡
-            乌鲁木齐 克拉玛依 吐鲁番 哈密 昌吉 博州 巴州 阿克苏 克州 喀什 和田 伊犁 塔城 阿勒泰 石河子 阿拉尔 图木舒克 五家渠 北屯 铁门关 双河 可克达拉 昆玉 胡杨河 新星
-            香港 澳门
-            """.trim().split("\\s+")));
+    private static final Map<String, List<String>> PROVINCE_CITIES = provinceCities();
+    private static final Map<String, String> CITY_PROVINCES = cityProvinces();
+    private static final Set<String> CANONICAL_CITIES = Set.copyOf(CITY_PROVINCES.keySet());
 
     private LocationScope() { }
 
@@ -50,5 +25,73 @@ public final class LocationScope {
 
     public static Set<String> provinceLevelLocations() {
         return PROVINCE_LEVEL_LOCATIONS;
+    }
+
+    public static boolean isProvince(String value) {
+        return value != null && PROVINCE_CITIES.containsKey(value.trim());
+    }
+
+    public static String provinceOf(String value) {
+        if (value == null) return "";
+        String normalized = value.trim().replaceFirst("市+$", "");
+        return CITY_PROVINCES.getOrDefault(normalized, isProvince(normalized) ? normalized : "");
+    }
+
+    public static List<String> citiesForProvince(String province) {
+        if (province == null) return List.of();
+        return PROVINCE_CITIES.getOrDefault(province.trim(), List.of());
+    }
+
+    public static Set<String> provinces() {
+        return PROVINCE_CITIES.keySet();
+    }
+
+    private static Map<String, List<String>> provinceCities() {
+        Map<String, List<String>> result = new LinkedHashMap<>();
+        addCities(result, "北京", "北京");
+        addCities(result, "天津", "天津");
+        addCities(result, "河北", "石家庄 唐山 秦皇岛 邯郸 邢台 保定 张家口 承德 沧州 廊坊 衡水 定州 辛集");
+        addCities(result, "山西", "太原 大同 阳泉 长治 晋城 朔州 晋中 运城 忻州 临汾 吕梁 古交");
+        addCities(result, "内蒙古", "呼和浩特 包头 乌海 赤峰 通辽 鄂尔多斯 呼伦贝尔 巴彦淖尔 乌兰察布 霍林郭勒 满洲里 牙克石 扎兰屯 根河 额尔古纳 丰镇");
+        addCities(result, "辽宁", "沈阳 大连 鞍山 抚顺 本溪 丹东 锦州 营口 阜新 辽阳 盘锦 铁岭 朝阳 葫芦岛");
+        addCities(result, "吉林", "长春 吉林 四平 辽源 通化 白山 松原 白城 延边 珲春");
+        addCities(result, "黑龙江", "哈尔滨 齐齐哈尔 鸡西 鹤岗 双鸭山 大庆 伊春 佳木斯 七台河 牡丹江 黑河 绥化 北安 五大连池 密山 虎林 铁力 同江 富锦 绥芬河 海林 宁安 穆棱 东宁 抚远 尚志 五常 讷河 安达 肇东 海伦");
+        addCities(result, "上海", "上海");
+        addCities(result, "江苏", "南京 无锡 徐州 常州 苏州 南通 连云港 淮安 盐城 扬州 镇江 泰州 宿迁 昆山 江阴 宜兴 张家港 常熟 太仓 溧阳 扬中 句容 丹阳 高邮 仪征 兴化 靖江 泰兴 如皋 启东 海安 东台 邳州 新沂");
+        addCities(result, "浙江", "杭州 宁波 温州 嘉兴 湖州 绍兴 金华 衢州 舟山 台州 丽水 建德 慈溪 余姚 平湖 海宁 桐乡 诸暨 嵊州 兰溪 义乌 东阳 永康 江山 临海 温岭 龙泉");
+        addCities(result, "安徽", "合肥 芜湖 蚌埠 淮南 马鞍山 淮北 铜陵 安庆 黄山 滁州 阜阳 宿州 六安 亳州 池州 宣城 桐城 潜山 界首 天长 明光");
+        addCities(result, "福建", "福州 厦门 莆田 三明 泉州 漳州 南平 龙岩 宁德 福清 长乐 永安 石狮 晋江 南安 龙海 漳平 福安 福鼎 邵武 武夷山 建瓯 建阳");
+        addCities(result, "江西", "南昌 景德镇 萍乡 九江 新余 鹰潭 赣州 吉安 宜春 抚州 上饶 瑞昌 共青城 庐山 乐平 瑞金 龙南 井冈山 丰城 樟树 高安 贵溪 德兴");
+        addCities(result, "山东", "济南 青岛 淄博 枣庄 东营 烟台 潍坊 济宁 泰安 威海 日照 临沂 德州 聊城 滨州 菏泽 胶州 平度 莱西 滕州 龙口 莱阳 莱州 蓬莱 招远 栖霞 海阳 青州 诸城 寿光 安丘 高密 昌邑 曲阜 邹城 新泰 肥城 荣成 乳山 乐陵 禹城 临清");
+        addCities(result, "河南", "郑州 开封 洛阳 平顶山 安阳 鹤壁 新乡 焦作 濮阳 许昌 漯河 三门峡 南阳 商丘 信阳 周口 驻马店 济源 巩义 荥阳 新密 新郑 登封 偃师 孟州 沁阳 卫辉 辉县 长垣 林州 禹州 长葛 义马 灵宝 邓州 永城 汝州 项城");
+        addCities(result, "湖北", "武汉 黄石 十堰 宜昌 襄阳 鄂州 荆门 孝感 荆州 黄冈 咸宁 随州 恩施 仙桃 潜江 天门 丹江口 宜都 当阳 枝江 老河口 枣阳 宜城 钟祥 应城 安陆 汉川 石首 洪湖 松滋 麻城 武穴 赤壁 广水 利川");
+        addCities(result, "湖南", "长沙 株洲 湘潭 衡阳 邵阳 岳阳 常德 张家界 益阳 郴州 永州 怀化 娄底 湘西 浏阳 宁乡 醴陵 湘乡 韶山 耒阳 常宁 武冈 汨罗 临湘 津市 沅江 资兴 洪江 冷水江 涟源 吉首");
+        addCities(result, "广东", "广州 韶关 深圳 珠海 汕头 佛山 江门 湛江 茂名 肇庆 惠州 梅州 汕尾 河源 阳江 清远 东莞 中山 潮州 揭阳 云浮 乐昌 南雄 台山 开平 鹤山 恩平 廉江 雷州 吴川 高州 化州 信宜 四会 兴宁 陆丰 阳春 英德 连州 普宁 罗定");
+        addCities(result, "广西", "南宁 柳州 桂林 梧州 北海 防城港 钦州 贵港 玉林 百色 贺州 河池 来宾 崇左 岑溪 东兴 桂平 北流 宜州 合山 凭祥");
+        addCities(result, "海南", "海口 三亚 三沙 儋州 五指山 琼海 文昌 万宁 东方");
+        addCities(result, "重庆", "重庆");
+        addCities(result, "四川", "成都 自贡 攀枝花 泸州 德阳 绵阳 广元 遂宁 内江 乐山 南充 眉山 宜宾 广安 达州 雅安 巴中 资阳 阿坝 甘孜 凉山 都江堰 彭州 邛崃 崇州 简阳 江油 广汉 什邡 绵竹 阆中 华蓥 万源 西昌 康定 马尔康");
+        addCities(result, "贵州", "贵阳 六盘水 遵义 安顺 毕节 铜仁 黔西南 黔东南 黔南 清镇 赤水 仁怀 凯里 都匀 福泉 兴义 兴仁");
+        addCities(result, "云南", "昆明 曲靖 玉溪 保山 昭通 丽江 普洱 临沧 楚雄 红河 文山 西双版纳 大理 德宏 怒江 迪庆 安宁 宣威 腾冲 水富 个旧 开远 蒙自 弥勒 景洪 瑞丽 芒市");
+        addCities(result, "西藏", "拉萨 日喀则 昌都 林芝 山南 那曲");
+        addCities(result, "陕西", "西安 铜川 宝鸡 咸阳 渭南 延安 汉中 榆林 安康 商洛 兴平 韩城 华阴");
+        addCities(result, "甘肃", "兰州 嘉峪关 金昌 白银 天水 武威 张掖 平凉 酒泉 庆阳 定西 陇南 临夏 甘南 玉门 敦煌");
+        addCities(result, "青海", "西宁 海东");
+        addCities(result, "宁夏", "银川 石嘴山 吴忠 固原 中卫 灵武 青铜峡");
+        addCities(result, "新疆", "乌鲁木齐 克拉玛依 吐鲁番 哈密 昌吉 博州 巴州 阿克苏 克州 喀什 和田 伊犁 塔城 阿勒泰 石河子 阿拉尔 图木舒克 五家渠 北屯 铁门关 双河 可克达拉 昆玉 胡杨河 新星");
+        addCities(result, "香港", "香港");
+        addCities(result, "澳门", "澳门");
+        addCities(result, "台湾", "台湾 台北 高雄 台中 台南 新北 桃园");
+        return Map.copyOf(result);
+    }
+
+    private static Map<String, String> cityProvinces() {
+        Map<String, String> result = new LinkedHashMap<>();
+        PROVINCE_CITIES.forEach((province, cities) -> cities.forEach(city -> result.put(city, province)));
+        return Map.copyOf(result);
+    }
+
+    private static void addCities(Map<String, List<String>> target, String province, String cityNames) {
+        target.put(province, List.copyOf(new ArrayList<>(List.of(cityNames.split("\\s+")))));
     }
 }

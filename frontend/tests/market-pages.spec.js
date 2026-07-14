@@ -17,10 +17,25 @@ const pageTwoJobs = Array.from({ length: 12 }, (_, index) => ({
   jobCategory: '后端开发', salaryMin: 9000, salaryMax: 16000, educationRequirement: '本科', experienceRequirement: '1-3年', industry: '软件',
 }))
 
+const regionDashboard = {
+  statDate: '2026-07-11',
+  summary: { jobCount: 12000, companyCount: 4835, cityCount: 190, industryCount: 15, averageSalary: 9200, entryFriendlyCount: 7600 },
+  provinceDemand: [
+    { key: '广东', jobCount: 1680, averageSalaryMin: 8600, averageSalaryMax: 14800 },
+    { key: '四川', jobCount: 920, averageSalaryMin: 7200, averageSalaryMax: 12100 },
+  ],
+  cities: [{ key: '深圳', jobCount: 760 }, { key: '广州', jobCount: 620 }, { key: '东莞', jobCount: 180 }],
+  industries: [{ key: '信息技术', jobCount: 720 }, { key: '智能制造', jobCount: 430 }],
+  jobCategories: [{ key: '软件开发', jobCount: 520 }, { key: '数据分析', jobCount: 310 }],
+}
+
 async function mockMarketApi(page) {
   await page.route((url) => url.pathname.startsWith('/api/'), async (route) => {
     const url = route.request().url()
-    if (url.includes('/market/statistics/city_distribution')) await route.fulfill({ json: [{ dimensionKey: '成都', metricValue: 1255 }, { dimensionKey: '北京', metricValue: 722 }, { dimensionKey: '上海', metricValue: 640 }, { dimensionKey: '重庆', metricValue: 177 }] })
+    if (url.includes('/university/market-dashboard')) {
+      const province = new URL(url).searchParams.get('city')
+      await route.fulfill({ json: province ? { ...regionDashboard, filter: { city: province }, summary: { ...regionDashboard.summary, jobCount: 1680, entryFriendlyCount: 1120 } } : regionDashboard })
+    }
     else if (url.includes('/market/statistics/hot_skills')) await route.fulfill({ json: skills })
     else if (url.includes('/jobs/filters')) await route.fulfill({ json: { cities: ['成都', '北京', '上海', '重庆'], categories: ['大数据开发', '后端开发', '数据分析'] } })
     else if (url.includes('/jobs?')) {
@@ -47,6 +62,7 @@ test('skills signal is a separate student market page with interactive analysis'
   await expect(page.getByRole('heading', { name: '市场技能排名' })).toBeVisible()
   await expect(page.locator('.job-zone')).toHaveCount(0)
   await expect(page.locator('.skill-signal')).toHaveCount(8)
+  await expect(page.locator('.city-demand-section')).toHaveCount(0)
 
   await page.locator('.skill-signal').filter({ hasText: 'Java' }).click()
   await expect(page.locator('.skill-focus-panel h2')).toHaveText('Java')
@@ -54,6 +70,35 @@ test('skills signal is a separate student market page with interactive analysis'
   await expect(page.locator('.skill-signal')).toHaveCount(2)
   await expect(page.locator('.skill-signal').filter({ hasText: 'Flink' })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('skills-page-desktop.png'), fullPage: true })
+})
+
+test('student region page drills from province opportunities into city jobs', async ({ page }, testInfo) => {
+  await mockMarketApi(page)
+  await page.goto('/')
+  await page.getByRole('button', { name: '进入学生端' }).click()
+  await page.getByRole('button', { name: '地区分布', exact: true }).click()
+
+  await expect(page.getByRole('heading', { name: /先看机会在哪/ })).toBeVisible()
+  await expect(page.locator('.student-region-map canvas')).toBeVisible()
+  await expect(page.getByText('深圳', { exact: true })).toBeVisible()
+  await expect(page.getByText('软件开发', { exact: true })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('student-region-desktop.png'), fullPage: true })
+
+  await page.getByRole('button', { name: /深圳/ }).click()
+  await expect(page.getByRole('heading', { name: /从市场里挑选方向/ })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: '搜索或选择城市' })).toHaveValue('深圳')
+})
+
+test('student region page stays contained on mobile', async ({ page }, testInfo) => {
+  await mockMarketApi(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await page.getByRole('button', { name: '进入学生端' }).click()
+  await page.getByRole('tab', { name: '地区分布' }).click()
+  await expect(page.locator('.student-region-map canvas')).toBeVisible()
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  expect(overflow).toBeLessThanOrEqual(1)
+  await page.screenshot({ path: testInfo.outputPath('student-region-mobile.png'), fullPage: true })
 })
 
 test('student market requests a new backend page instead of expanding all jobs', async ({ page }) => {
