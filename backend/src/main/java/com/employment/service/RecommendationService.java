@@ -61,9 +61,17 @@ public class RecommendationService {
     }
 
     public List<JobRecommendation> top(Long studentId, int limit) {
+        return top(studentId, limit, 5000);
+    }
+
+    public List<JobRecommendation> topForOverview(Long studentId, int limit) {
+        return top(studentId, limit, 400);
+    }
+
+    private List<JobRecommendation> top(Long studentId, int limit, int candidateLimit) {
         Context context = context(studentId);
         int safeLimit = Math.min(Math.max(limit, 1), 20);
-        List<JobRecommendation> ranked = score(jobMapper.selectList(candidateQuery(context.preference)).stream()
+        List<JobRecommendation> ranked = score(jobMapper.selectList(candidateQuery(context.preference, candidateLimit)).stream()
                 .filter(job -> educationEligible(context.student.education, job.educationRequirement)).toList(), context).stream()
                 .sorted(Comparator.comparingInt(JobRecommendation::totalScore).reversed()
                         .thenComparing(item -> item.job().jobKey))
@@ -141,12 +149,13 @@ public class RecommendationService {
         return new Context(student, names, experiences, jobPreferenceMapper.selectById(studentId));
     }
 
-    private QueryWrapper<Job> candidateQuery(JobPreference preference) {
+    private QueryWrapper<Job> candidateQuery(JobPreference preference, int candidateLimit) {
         QueryWrapper<Job> query = new QueryWrapper<Job>().eq("job_status", "active");
         if (preference != null && StringUtils.hasText(preference.expectedCity) && !Boolean.TRUE.equals(preference.acceptRemoteCity)) {
             query.eq("city", normalizeCity(preference.expectedCity));
         }
-        return query.last("ORDER BY last_seen_date DESC, MOD(CRC32(job_key), 1009) LIMIT 5000");
+        int safeCandidateLimit = Math.min(Math.max(candidateLimit, 100), 5000);
+        return query.last("ORDER BY last_seen_date DESC, MOD(CRC32(job_key), 1009) LIMIT " + safeCandidateLimit);
     }
 
     static int salaryScore(Integer expectedMinimum, Job job) {

@@ -87,7 +87,7 @@ public class UniversityStudentInsightService {
 
     private List<JobRecommendation> safeRecommendations(Long studentId) {
         try {
-            return recommendationService.top(studentId, 5);
+            return recommendationService.topForOverview(studentId, 5);
         } catch (RuntimeException exception) {
             return List.of();
         }
