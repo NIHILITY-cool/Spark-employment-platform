@@ -6,12 +6,12 @@ test('role landing keeps student and university workspaces separated', async ({ 
   await page.screenshot({ path: testInfo.outputPath('role-landing-desktop.png'), fullPage: true })
 
   await page.getByRole('button', { name: '进入学生端' }).click()
-  await expect(page.getByRole('heading', { name: /找到下一份/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '学生登录' })).toBeVisible()
   await expect(page.getByRole('button', { name: '进入高校端' })).toHaveCount(0)
-  await page.getByTitle('返回初始页').click()
+  await page.getByRole('button', { name: '返回入口' }).click()
 
   await page.getByRole('button', { name: '进入高校端' }).click()
-  await expect(page.getByRole('heading', { name: '用岗位数据支撑就业指导。' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '高校登录' })).toBeVisible()
   await expect(page.getByRole('button', { name: '岗位市场' })).toHaveCount(0)
 })
 

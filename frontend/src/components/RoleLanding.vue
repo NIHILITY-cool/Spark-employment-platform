@@ -20,7 +20,7 @@ const emit = defineEmits(['select-student', 'select-university'])
       <div class="role-landing-intro">
         <p class="eyebrow">请选择工作入口</p>
         <h1 id="role-landing-title">从你的视角<br />进入就业现场。</h1>
-        <p>学生关注个人机会，高校关注人才培养与市场需求。选择身份后进入对应工作台。</p>
+        <p>学生关注个人机会，高校关注培养与就业支持。选择身份并登录后进入对应工作台。</p>
       </div>
 
       <div class="role-cards" aria-label="工作台身份选择">
@@ -39,7 +39,7 @@ const emit = defineEmits(['select-student', 'select-university'])
           <span class="role-card-copy">
             <span class="role-card-label">高校端</span>
             <strong>培养需求分析工作台</strong>
-            <small>岗位需求 · 技能组合 · 地区矩阵</small>
+            <small>岗位需求 · 学生情况 · 就业支持</small>
           </span>
           <ArrowRight class="role-card-arrow" :size="20" aria-hidden="true" />
         </button>

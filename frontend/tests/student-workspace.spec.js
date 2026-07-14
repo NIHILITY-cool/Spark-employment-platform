@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { useAuthenticatedSession } from './auth-helper.js'
 
 const profilePayload = {
   profile: { studentNo: 'demo001', name: '林同学', college: '计算机学院', major: '数据科学与大数据技术', education: '本科', graduationYear: 2027 },
@@ -39,7 +40,8 @@ const recommendations = Array.from({ length: 10 }, (_, index) => ({
 async function mockStudentApi(page) {
   await page.route((url) => url.pathname.startsWith('/api/'), async (route) => {
     const requestUrl = route.request().url()
-    if (requestUrl.includes('/students/1/profile')) await route.fulfill({ json: profilePayload })
+    if (requestUrl.includes('/auth/me')) await route.fulfill({ json: { id: 10, role: 'STUDENT', username: 'demo001', displayName: '林同学', studentId: 1, enabled: true } })
+    else if (requestUrl.includes('/students/1/profile')) await route.fulfill({ json: profilePayload })
     else if (requestUrl.includes('/recommendations/top10')) await route.fulfill({ json: recommendations })
     else if (requestUrl.includes('/recommendations/skill-gap')) await route.fulfill({ json: { masteredSkills: ['Python', 'SQL'], missingSkills: ['Spark'], suggestion: '建议补强 Spark 项目实践。' } })
     else if (requestUrl.includes('/jobs/filters')) await route.fulfill({ json: { cities: ['成都', '北京'], categories: ['大数据开发', '后端开发'] } })
@@ -50,9 +52,8 @@ async function mockStudentApi(page) {
 
 test('student profile and recommendation workflow is interactive', async ({ page }, testInfo) => {
   await mockStudentApi(page)
+  await useAuthenticatedSession(page, 'STUDENT')
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /从你的视角/ })).toBeVisible()
-  await page.getByRole('button', { name: '进入学生端' }).click()
   await expect(page.getByRole('heading', { name: /找到下一份/ })).toBeVisible()
 
   const favorite = page.getByRole('button', { name: '收藏岗位' }).first()
@@ -91,9 +92,9 @@ test('student profile and recommendation workflow is interactive', async ({ page
 
 test('student workspace remains usable on a mobile viewport', async ({ page }, testInfo) => {
   await mockStudentApi(page)
+  await useAuthenticatedSession(page, 'STUDENT')
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  await page.getByRole('button', { name: '进入学生端' }).click()
   await page.getByRole('button', { name: /我的工作台/ }).click()
   await expect(page.getByRole('heading', { name: /把目标变成下一步行动/ })).toBeVisible()
 

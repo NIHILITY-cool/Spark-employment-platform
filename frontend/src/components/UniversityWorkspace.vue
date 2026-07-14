@@ -12,13 +12,13 @@ import {
   CircleAlert,
   Database,
   GraduationCap,
-  Home,
   Lightbulb,
   LoaderCircle,
   MapPinned,
   RefreshCw,
   Search,
   Sparkles,
+  LogOut,
 } from '@lucide/vue'
 import { apiRequest } from '../api/client'
 import chinaGeoJson from '../assets/china.geo.json'
@@ -26,6 +26,7 @@ import SearchSelect from './SearchSelect.vue'
 
 const IndustrySalaryPanel = defineAsyncComponent(() => import('./IndustrySalaryPanel.vue'))
 const TrainingAlignmentPanel = defineAsyncComponent(() => import('./TrainingAlignmentPanel.vue'))
+const UniversityStudentOverview = defineAsyncComponent(() => import('./UniversityStudentOverview.vue'))
 
 echarts.use([
   BarChart,
@@ -49,7 +50,7 @@ const props = defineProps({
   apiBase: { type: String, required: true },
   cityOptions: { type: Array, default: () => [] },
 })
-const emit = defineEmits(['back-to-portal'])
+const emit = defineEmits(['logout'])
 
 const activeTab = ref('overview')
 const loading = ref(true)
@@ -87,6 +88,7 @@ const tabs = [
   { key: 'region', label: '地区行业' },
   { key: 'salary', label: '薪资技能' },
   { key: 'training', label: '专业方向' },
+  { key: 'students', label: '学生情况' },
 ]
 
 const demandChartModes = [
@@ -1462,7 +1464,7 @@ onBeforeUnmount(() => {
         <p>围绕公开岗位样本展示市场需求、岗位大类、地区结构、薪资学历、技能信号和数据质量；不生成学生就业率或培养质量结论。</p>
       </div>
       <div class="university-banner-actions">
-        <button class="university-button" type="button" title="返回初始页" @click="emit('back-to-portal')"><Home :size="15" /><span>返回初始页</span></button>
+        <button class="university-button" type="button" title="退出高校端" @click="emit('logout')"><LogOut :size="15" /><span>退出登录</span></button>
         <div class="data-stamp"><Database :size="18" /><span>数据批次</span><strong>{{ current.statDate }}</strong></div>
       </div>
     </header>
@@ -1471,7 +1473,7 @@ onBeforeUnmount(() => {
       <button v-for="tab in tabs" :key="tab.key" type="button" :class="{ active: activeTab === tab.key }" @click="activeTab = tab.key">{{ tab.label }}</button>
     </nav>
 
-    <form v-if="activeTab !== 'training'" class="dashboard-controls" @submit.prevent="loadDashboard">
+    <form v-if="!['training', 'students'].includes(activeTab)" class="dashboard-controls" @submit.prevent="loadDashboard">
       <label v-if="showFilter('keyword')" class="dashboard-search"><Search :size="16" /><input v-model="filters.keyword" placeholder="搜索岗位、企业或技能" /></label>
       <SearchSelect v-if="showFilter('city')" v-model="filters.city" class="analysis-picker" label="地区筛选" placeholder="搜索省份或城市" empty-label="全部地区" :options="regionOptions" />
       <SearchSelect v-if="showFilter('industry')" v-model="filters.industry" class="analysis-picker" label="行业筛选" placeholder="搜索行业" empty-label="全部行业" :options="industryOptions" />
@@ -1482,7 +1484,7 @@ onBeforeUnmount(() => {
       <button class="command secondary" type="button" @click="resetFilters">重置</button>
     </form>
 
-    <section v-if="activeTab !== 'training'" class="filter-status">
+    <section v-if="!['training', 'students'].includes(activeTab)" class="filter-status">
       <div>
         <strong>{{ loading ? '正在刷新看板' : `当前筛选得到 ${formatNumber(current.summary.jobCount)} 个岗位样本` }}</strong>
         <span>{{ current.dataBasis }}</span>
@@ -1493,8 +1495,8 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <div v-if="sourceNotice && activeTab !== 'training'" class="university-info"><CircleAlert :size="18" /><span>{{ sourceNotice }}</span></div>
-    <div v-if="loading && !dashboard && activeTab !== 'training'" class="workspace-loading"><LoaderCircle :size="28" /><span>正在聚合高校端市场看板</span></div>
+    <div v-if="sourceNotice && !['training', 'students'].includes(activeTab)" class="university-info"><CircleAlert :size="18" /><span>{{ sourceNotice }}</span></div>
+    <div v-if="loading && !dashboard && !['training', 'students'].includes(activeTab)" class="workspace-loading"><LoaderCircle :size="28" /><span>正在聚合高校端市场看板</span></div>
 
     <template v-if="activeTab === 'overview'">
       <section class="dashboard-kpis" aria-label="高校端核心指标">
@@ -1796,6 +1798,7 @@ onBeforeUnmount(() => {
       </section>
     </template>
 
-    <TrainingAlignmentPanel v-else :api-base="props.apiBase" :city-options="regionOptions" @back-to-portal="emit('back-to-portal')" />
+    <TrainingAlignmentPanel v-else-if="activeTab === 'training'" :api-base="props.apiBase" :city-options="regionOptions" @back-to-portal="emit('logout')" />
+    <UniversityStudentOverview v-else :api-base="props.apiBase" />
   </section>
 </template>

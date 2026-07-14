@@ -1,6 +1,7 @@
 package com.employment.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.employment.dto.JobPreferenceRequest;
 import com.employment.dto.StudentProfileRequest;
 import com.employment.dto.StudentExperienceRequest;
@@ -75,9 +76,11 @@ public class StudentProfileService {
         if (existing != null) {
             existing.skillLevel = skill.skillLevel;
             studentSkillMapper.updateById(existing);
+            touch(studentId);
             return existing;
         }
         studentSkillMapper.insert(skill);
+        touch(studentId);
         return skill;
     }
 
@@ -87,6 +90,7 @@ public class StudentProfileService {
         if (studentSkillMapper.delete(new QueryWrapper<StudentSkill>().eq("id", skillId).eq("student_id", studentId)) == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "技能不存在");
         }
+        touch(studentId);
     }
 
     @Transactional
@@ -94,6 +98,7 @@ public class StudentProfileService {
         requiredStudent(studentId);
         StudentExperience experience = experienceFrom(studentId, request);
         studentExperienceMapper.insert(experience);
+        touch(studentId);
         return experience;
     }
 
@@ -106,6 +111,7 @@ public class StudentProfileService {
         StudentExperience experience = experienceFrom(studentId, request);
         experience.id = current.id;
         studentExperienceMapper.updateById(experience);
+        touch(studentId);
         return experience;
     }
 
@@ -116,6 +122,7 @@ public class StudentProfileService {
                 .eq("id", experienceId).eq("student_id", studentId)) == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "经历不存在");
         }
+        touch(studentId);
     }
 
     @Transactional
@@ -132,6 +139,7 @@ public class StudentProfileService {
         preference.acceptRemoteCity = Boolean.TRUE.equals(request.acceptRemoteCity());
         if (jobPreferenceMapper.selectById(studentId) == null) jobPreferenceMapper.insert(preference);
         else jobPreferenceMapper.updateById(preference);
+        touch(studentId);
         return preference;
     }
 
@@ -177,5 +185,10 @@ public class StudentProfileService {
     private String emptyToNull(String value) {
         String trimmed = trim(value);
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void touch(Long studentId) {
+        studentMapper.update(null, new UpdateWrapper<Student>().eq("id", studentId)
+                .setSql("updated_at = CURRENT_TIMESTAMP"));
     }
 }

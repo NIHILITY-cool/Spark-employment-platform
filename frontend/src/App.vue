@@ -1,15 +1,22 @@
 <script setup>
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ArrowDown, ArrowRight, ChevronLeft, ChevronRight, Clock3, Crosshair, GraduationCap, Heart, Home, MapPin, Search, Sparkles, UserRound } from '@lucide/vue'
+import { ArrowDown, ArrowRight, ChevronLeft, ChevronRight, Clock3, Crosshair, GraduationCap, Heart, LogOut, MapPin, Search, Sparkles, UserRound } from '@lucide/vue'
 import RoleLanding from './components/RoleLanding.vue'
+import AuthGateway from './components/AuthGateway.vue'
 import SearchSelect from './components/SearchSelect.vue'
 import StudentWorkspace from './components/StudentWorkspace.vue'
 import JobDetailDrawer from './components/JobDetailDrawer.vue'
+import { apiRequest, authorizedFetch, clearAuthSession, getAuthSession, saveAuthSession } from './api/client'
 
 const UniversityWorkspace = defineAsyncComponent(() => import('./components/UniversityWorkspace.vue'))
 const StudentRegionPage = defineAsyncComponent(() => import('./components/StudentRegionPage.vue'))
+const AdminWorkspace = defineAsyncComponent(() => import('./components/AdminWorkspace.vue'))
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+const adminRoute = window.location.pathname.replace(/\/+$/, '') === '/admin'
+const authReady = ref(false)
+const authAccount = ref(null)
+const authRole = ref('STUDENT')
 const loading = ref(false)
 const usingDemo = ref(false)
 const message = ref('')
@@ -80,7 +87,7 @@ function pageItems(current, count) {
 
 async function loadMarket() {
   try {
-    const skillResponse = await fetch(`${apiBase}/market/statistics/hot_skills`)
+    const skillResponse = await authorizedFetch(`${apiBase}/market/statistics/hot_skills`)
     if (!skillResponse.ok) throw new Error('market unavailable')
     hotSkills.value = await skillResponse.json()
     if (!selectedSkill.value || !hotSkills.value.some((item) => item.dimensionKey === selectedSkill.value)) selectedSkill.value = hotSkills.value[0]?.dimensionKey || ''
@@ -95,7 +102,7 @@ async function loadMarket() {
 
 async function loadFilters() {
   try {
-    const response = await fetch(`${apiBase}/jobs/filters`)
+    const response = await authorizedFetch(`${apiBase}/jobs/filters`)
     if (!response.ok) throw new Error('filters unavailable')
     const payload = await response.json()
     cityOptions.value = Array.isArray(payload.cities)
@@ -117,7 +124,7 @@ async function search(requestedPage = 1) {
   if (city.value) params.set('city', city.value)
   if (category.value) params.set('category', category.value)
   try {
-    const response = await fetch(`${apiBase}/jobs?${params}`)
+    const response = await authorizedFetch(`${apiBase}/jobs?${params}`)
     if (!response.ok) throw new Error('jobs unavailable')
     const payload = await response.json()
     jobs.value = payload.records
@@ -161,17 +168,48 @@ function openStudent(tab = 'profile') {
 }
 
 function enterStudent() {
-  showMarket()
+  if (authAccount.value?.role === 'STUDENT') showMarket()
+  else {
+    authRole.value = 'STUDENT'
+    view.value = 'auth'
+  }
 }
 
 function enterUniversity() {
-  view.value = 'university'
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  if (authAccount.value?.role === 'UNIVERSITY') {
+    view.value = 'university'
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  } else {
+    authRole.value = 'UNIVERSITY'
+    view.value = 'auth'
+  }
 }
 
 function showPortal() {
   view.value = 'landing'
   window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+async function handleAuthenticated(session) {
+  saveAuthSession(session)
+  authAccount.value = session.account
+  if (session.account.role === 'STUDENT') {
+    await Promise.all([search(1), loadMarket(), loadFilters()])
+    showMarket()
+  } else if (session.account.role === 'UNIVERSITY') {
+    await loadFilters()
+    view.value = 'university'
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+async function logout() {
+  try { await apiRequest(apiBase, '/auth/logout', { method: 'POST' }) } catch { /* Session may already be expired. */ }
+  clearAuthSession()
+  authAccount.value = null
+  jobs.value = []
+  total.value = 0
+  showPortal()
 }
 
 function showMarket(anchor = '') {
@@ -215,7 +253,7 @@ async function openJobDetail(job) {
   jobDetailLoading.value = true
   jobDetailError.value = ''
   try {
-    const response = await fetch(`${apiBase}/jobs/${encodeURIComponent(job.jobKey)}`)
+    const response = await authorizedFetch(`${apiBase}/jobs/${encodeURIComponent(job.jobKey)}`)
     if (!response.ok) throw new Error('暂时无法读取岗位完整信息')
     const payload = await response.json()
     if (activeJobDetail.value?.job?.jobKey === job.jobKey) activeJobDetail.value = payload
@@ -235,19 +273,54 @@ function handleGlobalKeydown(event) {
   if (event.key === 'Escape' && activeJobDetail.value) closeJobDetail()
 }
 
+async function bootstrapAuth() {
+  if (adminRoute) {
+    authReady.value = true
+    return
+  }
+  const session = getAuthSession()
+  if (!session?.token) {
+    authReady.value = true
+    return
+  }
+  try {
+    const account = await apiRequest(apiBase, '/auth/me')
+    authAccount.value = account
+    if (account.role === 'STUDENT') {
+      await Promise.all([search(1), loadMarket(), loadFilters()])
+      view.value = 'market'
+    } else if (account.role === 'UNIVERSITY') {
+      await loadFilters()
+      view.value = 'university'
+    } else {
+      clearAuthSession()
+    }
+  } catch {
+    clearAuthSession()
+    authAccount.value = null
+  } finally {
+    authReady.value = true
+  }
+}
+
 onMounted(async () => {
   window.addEventListener('keydown', handleGlobalKeydown)
-  await Promise.all([search(1), loadMarket(), loadFilters()])
+  await bootstrapAuth()
 })
 
 onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown))
 </script>
 
 <template>
-  <main class="shell" :class="{ 'portal-shell': view === 'landing' }">
-    <RoleLanding v-if="view === 'landing'" :job-count="headlineTotal" @select-student="enterStudent" @select-university="enterUniversity" />
+  <AdminWorkspace v-if="adminRoute" :api-base="apiBase" />
+  <main v-else class="shell" :class="{ 'portal-shell': ['landing', 'auth'].includes(view) }">
+    <div v-if="!authReady" class="auth-bootstrap">正在恢复登录状态…</div>
 
-    <UniversityWorkspace v-else-if="view === 'university'" :api-base="apiBase" :city-options="cityOptions" @back-to-portal="showPortal" />
+    <RoleLanding v-else-if="view === 'landing'" :job-count="headlineTotal" @select-student="enterStudent" @select-university="enterUniversity" />
+
+    <AuthGateway v-else-if="view === 'auth'" :api-base="apiBase" :role="authRole" @authenticated="handleAuthenticated" @back="showPortal" />
+
+    <UniversityWorkspace v-else-if="view === 'university'" :api-base="apiBase" :city-options="cityOptions" @logout="logout" />
 
     <template v-else>
     <header class="topbar">
@@ -262,7 +335,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
         <button :class="{ active: view === 'student' }" type="button" @click="openStudent('profile')">我的画像</button>
       </nav>
       <div class="top-actions">
-        <button class="university-button" type="button" title="返回初始页" @click="showPortal"><Home :size="15" /><span>返回初始页</span></button>
+        <button class="university-button" type="button" title="退出学生端" @click="logout"><LogOut :size="15" /><span>退出登录</span></button>
         <button class="profile-button" type="button" @click="openStudent('recommendations')"><UserRound :size="15" />我的工作台<ArrowRight :size="15" /></button>
       </div>
     </header>
@@ -371,7 +444,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
 
     <StudentRegionPage v-else-if="view === 'regions'" :api-base="apiBase" @browse-city="browseCityJobs" />
 
-    <StudentWorkspace v-else :api-base="apiBase" :student-id="1" :city-options="cityOptions" :category-options="categoryOptions" :initial-tab="studentTab" @back-to-market="showMarket()" />
+    <StudentWorkspace v-else :api-base="apiBase" :student-id="authAccount.studentId" :city-options="cityOptions" :category-options="categoryOptions" :initial-tab="studentTab" @back-to-market="showMarket()" />
     </template>
 
     <JobDetailDrawer :detail="activeJobDetail" :loading="jobDetailLoading" :error="jobDetailError" @close="closeJobDetail" />

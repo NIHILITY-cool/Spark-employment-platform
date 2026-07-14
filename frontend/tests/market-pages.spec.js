@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { useAuthenticatedSession } from './auth-helper.js'
 
 const skills = [
   { dimensionKey: 'Python', metricValue: 841 }, { dimensionKey: 'Java', metricValue: 782 },
@@ -32,7 +33,8 @@ const regionDashboard = {
 async function mockMarketApi(page) {
   await page.route((url) => url.pathname.startsWith('/api/'), async (route) => {
     const url = route.request().url()
-    if (url.includes('/university/market-dashboard')) {
+    if (url.includes('/auth/me')) await route.fulfill({ json: { id: 10, role: 'STUDENT', username: 'demo001', displayName: '林同学', studentId: 1, enabled: true } })
+    else if (url.includes('/university/market-dashboard')) {
       const province = new URL(url).searchParams.get('city')
       await route.fulfill({ json: province ? { ...regionDashboard, filter: { city: province }, summary: { ...regionDashboard.summary, jobCount: 1680, entryFriendlyCount: 1120 } } : regionDashboard })
     }
@@ -54,8 +56,8 @@ async function mockMarketApi(page) {
 
 test('skills signal is a separate student market page with interactive analysis', async ({ page }, testInfo) => {
   await mockMarketApi(page)
+  await useAuthenticatedSession(page, 'STUDENT')
   await page.goto('/')
-  await page.getByRole('button', { name: '进入学生端' }).click()
   await expect(page.getByRole('heading', { name: /找到下一份/ })).toBeVisible()
 
   await page.getByRole('button', { name: '技能信号', exact: true }).click()
@@ -74,8 +76,8 @@ test('skills signal is a separate student market page with interactive analysis'
 
 test('student region page drills from province opportunities into city jobs', async ({ page }, testInfo) => {
   await mockMarketApi(page)
+  await useAuthenticatedSession(page, 'STUDENT')
   await page.goto('/')
-  await page.getByRole('button', { name: '进入学生端' }).click()
   await page.getByRole('button', { name: '地区分布', exact: true }).click()
 
   await expect(page.getByRole('heading', { name: /先看机会在哪/ })).toBeVisible()
@@ -91,9 +93,9 @@ test('student region page drills from province opportunities into city jobs', as
 
 test('student region page stays contained on mobile', async ({ page }, testInfo) => {
   await mockMarketApi(page)
+  await useAuthenticatedSession(page, 'STUDENT')
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  await page.getByRole('button', { name: '进入学生端' }).click()
   await page.getByRole('tab', { name: '地区分布' }).click()
   await expect(page.locator('.student-region-map canvas')).toBeVisible()
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
@@ -103,8 +105,8 @@ test('student region page stays contained on mobile', async ({ page }, testInfo)
 
 test('student market requests a new backend page instead of expanding all jobs', async ({ page }) => {
   await mockMarketApi(page)
+  await useAuthenticatedSession(page, 'STUDENT')
   await page.goto('/')
-  await page.getByRole('button', { name: '进入学生端' }).click()
   await expect(page.locator('.job-card')).toHaveCount(12)
   await expect(page.getByText('第 1 / 3 页')).toBeVisible()
 
@@ -115,8 +117,8 @@ test('student market requests a new backend page instead of expanding all jobs',
 
 test('clicking a job opens a detailed in-page job drawer', async ({ page }) => {
   await mockMarketApi(page)
+  await useAuthenticatedSession(page, 'STUDENT')
   await page.goto('/')
-  await page.getByRole('button', { name: '进入学生端' }).click()
   await page.getByText('数据工程师 1', { exact: true }).click()
 
   const dialog = page.getByRole('dialog', { name: '数据工程师 1岗位详情' })
@@ -131,9 +133,9 @@ test('clicking a job opens a detailed in-page job drawer', async ({ page }) => {
 
 test('student market selectors use the shared searchable picker on mobile', async ({ page }, testInfo) => {
   await mockMarketApi(page)
+  await useAuthenticatedSession(page, 'STUDENT')
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  await page.getByRole('button', { name: '进入学生端' }).click()
   await page.getByRole('tab', { name: '技能信号' }).click()
   await expect(page.getByRole('heading', { name: '市场技能排名' })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('skills-page-mobile.png'), fullPage: true })

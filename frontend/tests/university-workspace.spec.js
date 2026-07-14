@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { useAuthenticatedSession } from './auth-helper.js'
 
 const analysis = {
   statDate: '2026-07-11',
@@ -79,10 +80,21 @@ const industrySalary = {
   )),
 }
 
+const studentInsight = {
+  summary: { studentCount: 3, profileCompletedCount: 2, difficultCount: 1, averageTopMatchScore: 67 },
+  students: [
+    { studentId: 3, studentNo: '2026003', name: '周同学', college: '计算机学院', major: '软件工程', education: '本科', graduationYear: 2027, profileCompleted: false, lastSavedAt: '2026-07-14T12:00:00', skillCount: 0, experienceCount: 0, preferenceSaved: false, topMatchScore: 0, averageMatchScore: 0, bestJobName: '', bestJobCategory: '', difficult: true, status: '需重点关注', gaps: ['基本画像尚未完善', '技能清单未保存', '缺少项目或实习经历', '未保存就业期望'], evidence: [] },
+    { studentId: 1, studentNo: '2026001', name: '林同学', college: '计算机学院', major: '数据科学与大数据技术', education: '本科', graduationYear: 2027, profileCompleted: true, lastSavedAt: '2026-07-14T13:10:00', skillCount: 5, experienceCount: 2, preferenceSaved: true, topMatchScore: 72, averageMatchScore: 65, bestJobName: '大数据开发工程师', bestJobCategory: '大数据开发', difficult: false, status: '匹配较好', gaps: ['实践经历与目标岗位关联偏弱'], evidence: ['已维护 5 项技能', '岗位方向符合期望'] },
+  ],
+  dataBasis: '学生情况以学生最后一次保存的画像、技能、经历和就业期望为准。',
+}
+
 async function mockApi(page) {
   await page.route((url) => url.pathname.startsWith('/api/'), async (route) => {
     const url = route.request().url()
-    if (url.includes('/university/market-dashboard')) {
+    if (url.includes('/auth/me')) await route.fulfill({ json: { id: 20, role: 'UNIVERSITY', username: 'university', displayName: '高校就业中心', studentId: null, enabled: true } })
+    else if (url.includes('/university/students')) await route.fulfill({ json: studentInsight })
+    else if (url.includes('/university/market-dashboard')) {
       await route.fulfill({ json: dashboard })
     } else if (url.includes('/university/training-alignment')) {
       const requestUrl = new URL(url)
@@ -102,10 +114,15 @@ async function mockApi(page) {
 
 test('university training scenario controls update the evidence view', async ({ page }, testInfo) => {
   await mockApi(page)
+  await useAuthenticatedSession(page, 'UNIVERSITY')
   await page.goto('/')
-  await page.getByRole('button', { name: '进入高校端' }).click()
   await expect(page.getByRole('heading', { name: '用岗位数据支撑就业指导。' })).toBeVisible()
   await expect(page.getByText('地区岗位结构占比')).toBeVisible()
+
+  await page.getByRole('button', { name: '学生情况' }).click()
+  await expect(page.getByRole('heading', { name: /把需要帮助的人/ })).toBeVisible()
+  await expect(page.getByText('周同学', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('基本画像尚未完善')).toBeVisible()
 
   await page.getByRole('button', { name: '岗位需求' }).click()
   await expect(page.getByText('岗位大类归并规则')).toBeVisible()
@@ -138,9 +155,9 @@ test('university training scenario controls update the evidence view', async ({ 
 
 test('university evidence view is contained on mobile', async ({ page }, testInfo) => {
   await mockApi(page)
+  await useAuthenticatedSession(page, 'UNIVERSITY')
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  await page.getByRole('button', { name: '进入高校端' }).click()
   await page.getByRole('button', { name: '岗位需求' }).click()
   await expect(page.getByText('岗位大类归并规则')).toBeVisible()
   await page.getByRole('button', { name: '薪资技能' }).click()

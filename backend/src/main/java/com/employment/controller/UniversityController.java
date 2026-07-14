@@ -4,6 +4,8 @@ import com.employment.dto.IndustrySalaryResponse;
 import com.employment.dto.TrainingAlignmentResponse;
 import com.employment.dto.UniversityMarketDashboardResponse;
 import com.employment.service.UniversityAnalysisService;
+import com.employment.service.UniversityStudentInsightService;
+import com.employment.vo.UniversityStudentInsightResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -13,9 +15,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/university")
 public class UniversityController {
     private final UniversityAnalysisService universityAnalysisService;
+    private final UniversityStudentInsightService studentInsightService;
 
-    public UniversityController(UniversityAnalysisService universityAnalysisService) {
+    public UniversityController(UniversityAnalysisService universityAnalysisService,
+                                UniversityStudentInsightService studentInsightService) {
         this.universityAnalysisService = universityAnalysisService;
+        this.studentInsightService = studentInsightService;
+    }
+
+    @GetMapping("/students")
+    public UniversityStudentInsightResponse students() {
+        return studentInsightService.overview();
     }
 
     @GetMapping("/market-dashboard")
