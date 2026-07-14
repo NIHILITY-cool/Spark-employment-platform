@@ -25,14 +25,27 @@ dist/
 .output/
 frontend/test-results/
 frontend/playwright-report/
+frontend/vite-*.err
+frontend/vite-*.out
+frontend/vite-*.log
+
+# Java build outputs
+backend/target/
 
 # IDE
 .vscode/
 .idea/
 .codex/
+.agents/
 *.swp
 *.swo
 *~
+
+# 本地工具与迁移资料
+.tools/
+迁移信息/
+另一个队友的建议信息/
+.git_broken_backup/
 
 # 大数据
 hadoop-data/

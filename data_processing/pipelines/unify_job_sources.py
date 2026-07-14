@@ -13,6 +13,7 @@ import os
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
+from data_processing.industry_normalization import normalize_industry
 
 TIMESTAMP = os.environ.get("JOB_DATA_DATE", "2026-07-11")
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -270,6 +271,7 @@ def merge_and_analyze(dfs: list[pd.DataFrame]):
         df_all["city"].fillna("").astype(str).str.strip().str.replace(r"市+$", "", regex=True)
         .replace({"中国": "全国"})
     )
+    df_all["industry"] = df_all["industry"].apply(lambda value: normalize_industry(value).industry)
     print(f"\n  合并后: {len(df_all)} 行")
 
     # 按source统计
