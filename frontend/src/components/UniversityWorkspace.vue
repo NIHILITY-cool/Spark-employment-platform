@@ -1484,14 +1484,9 @@ onBeforeUnmount(() => {
       <button class="command secondary" type="button" @click="resetFilters">重置</button>
     </form>
 
-    <section v-if="!['training', 'students'].includes(activeTab)" class="filter-status">
-      <div>
-        <strong>{{ loading ? '正在刷新看板' : `当前筛选得到 ${formatNumber(current.summary.jobCount)} 个岗位样本` }}</strong>
-        <span>{{ current.dataBasis }}</span>
-      </div>
+    <section v-if="!['training', 'students'].includes(activeTab) && activeFilterChips.length" class="filter-status">
       <div class="filter-chips">
         <button v-for="item in activeFilterChips" :key="item.label" type="button" @click="clearFilter({ 关键词: 'keyword', 地区: 'city', 行业: 'industry', 学历: 'education', 岗位方向: 'category', 企业规模: 'companyScale' }[item.label])">{{ item.label }}：{{ item.value }}</button>
-        <span v-if="!activeFilterChips.length">未启用筛选</span>
       </div>
     </section>
 

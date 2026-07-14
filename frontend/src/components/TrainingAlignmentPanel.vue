@@ -202,7 +202,7 @@ onMounted(() => loadAnalysis(true))
       </div>
 
       <section class="matrix-section">
-        <div class="university-section-head"><div><p class="eyebrow">Spark 清洗岗位 · 即席聚合</p><h2>地区 × 岗位方向需求矩阵</h2></div><span>颜色越深，岗位样本越多</span></div>
+        <div class="university-section-head"><div><p class="eyebrow">地区与岗位方向</p><h2>地区 × 岗位方向需求矩阵</h2></div><span>颜色越深，岗位越多</span></div>
         <div class="matrix-scroll">
           <div class="demand-matrix" :style="{ '--columns': matrixCategories.length }">
             <div class="matrix-corner">地区 / 方向</div><div v-for="category in matrixCategories" :key="category" class="matrix-column">{{ category }}</div>
@@ -217,7 +217,6 @@ onMounted(() => loadAnalysis(true))
       <section class="guidance-section">
         <div class="university-section-head"><div><p class="eyebrow">规则建议</p><h2>可进入下一轮论证的方向</h2></div><Lightbulb :size="21" /></div>
         <ol><li v-for="(item, index) in analysis.suggestions" :key="item"><span>{{ String(index + 1).padStart(2, '0') }}</span><p>{{ item }}</p></li></ol>
-        <p class="data-basis">{{ analysis.dataBasis }}</p>
       </section>
     </template>
   </section>

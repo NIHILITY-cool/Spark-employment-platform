@@ -295,9 +295,8 @@ onMounted(loadWorkspace)
         <ArrowLeft :size="18" />
       </button>
       <div class="workspace-title">
-        <p class="eyebrow">学生就业工作台 · DEMO001</p>
+        <p class="eyebrow">学生就业工作台</p>
         <h1>{{ profile.name || '学生画像' }}，把目标变成下一步行动。</h1>
-        <p>画像由学生自主维护，推荐基于近期公开岗位计算，不代表录用结果。</p>
       </div>
       <div class="workspace-metrics" aria-label="画像与推荐摘要">
         <div><strong>{{ profileCompletion }}%</strong><span>画像完整度</span></div>
