@@ -27,14 +27,17 @@ public class StudentProfileService {
     private final StudentSkillMapper studentSkillMapper;
     private final StudentExperienceMapper studentExperienceMapper;
     private final JobPreferenceMapper jobPreferenceMapper;
+    private final StudentInsightCache studentInsightCache;
 
     public StudentProfileService(StudentMapper studentMapper, StudentSkillMapper studentSkillMapper,
                                  StudentExperienceMapper studentExperienceMapper,
-                                 JobPreferenceMapper jobPreferenceMapper) {
+                                 JobPreferenceMapper jobPreferenceMapper,
+                                 StudentInsightCache studentInsightCache) {
         this.studentMapper = studentMapper;
         this.studentSkillMapper = studentSkillMapper;
         this.studentExperienceMapper = studentExperienceMapper;
         this.jobPreferenceMapper = jobPreferenceMapper;
+        this.studentInsightCache = studentInsightCache;
     }
 
     @Transactional
@@ -42,6 +45,7 @@ public class StudentProfileService {
         Student student = from(request);
         student.profileCompleted = true;
         studentMapper.insert(student);
+        studentInsightCache.invalidateAfterCommit();
         return student;
     }
 
@@ -61,6 +65,7 @@ public class StudentProfileService {
         next.id = current.id;
         next.profileCompleted = true;
         studentMapper.updateById(next);
+        studentInsightCache.invalidateAfterCommit();
         return next;
     }
 
@@ -77,10 +82,12 @@ public class StudentProfileService {
             existing.skillLevel = skill.skillLevel;
             studentSkillMapper.updateById(existing);
             touch(studentId);
+            studentInsightCache.invalidateAfterCommit();
             return existing;
         }
         studentSkillMapper.insert(skill);
         touch(studentId);
+        studentInsightCache.invalidateAfterCommit();
         return skill;
     }
 
@@ -91,6 +98,7 @@ public class StudentProfileService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "技能不存在");
         }
         touch(studentId);
+        studentInsightCache.invalidateAfterCommit();
     }
 
     @Transactional
@@ -99,6 +107,7 @@ public class StudentProfileService {
         StudentExperience experience = experienceFrom(studentId, request);
         studentExperienceMapper.insert(experience);
         touch(studentId);
+        studentInsightCache.invalidateAfterCommit();
         return experience;
     }
 
@@ -112,6 +121,7 @@ public class StudentProfileService {
         experience.id = current.id;
         studentExperienceMapper.updateById(experience);
         touch(studentId);
+        studentInsightCache.invalidateAfterCommit();
         return experience;
     }
 
@@ -123,6 +133,7 @@ public class StudentProfileService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "经历不存在");
         }
         touch(studentId);
+        studentInsightCache.invalidateAfterCommit();
     }
 
     @Transactional
@@ -140,6 +151,7 @@ public class StudentProfileService {
         if (jobPreferenceMapper.selectById(studentId) == null) jobPreferenceMapper.insert(preference);
         else jobPreferenceMapper.updateById(preference);
         touch(studentId);
+        studentInsightCache.invalidateAfterCommit();
         return preference;
     }
 

@@ -78,7 +78,9 @@ public class RecommendationService {
                 .toList();
         if (context.preference != null && StringUtils.hasText(context.preference.expectedJob)) {
             List<JobRecommendation> aligned = ranked.stream().filter(item -> item.directionScore() >= 18).toList();
-            ranked = aligned;
+            // A small overview candidate sample may contain no strongly aligned title. Keep the
+            // best available candidates instead of returning an unexplained empty recommendation.
+            if (!aligned.isEmpty()) ranked = aligned;
         }
         return ranked.stream().limit(safeLimit).toList();
     }

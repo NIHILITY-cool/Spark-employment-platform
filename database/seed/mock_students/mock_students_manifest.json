@@ -1,0 +1,54 @@
+{
+  "dataset_name": "mock-students-100",
+  "generated_at": "2026-07-14",
+  "seed": 20260714,
+  "student_count": 100,
+  "account_count": 100,
+  "skill_count": 329,
+  "experience_count": 199,
+  "preference_count": 90,
+  "college_distribution": {
+    "信息工程学院": 30,
+    "大数据学院": 25,
+    "经济管理学院": 20,
+    "智能制造学院": 15,
+    "其他学院": 10
+  },
+  "major_distribution": {
+    "软件工程": 10,
+    "数据科学与大数据技术": 15,
+    "大数据管理与应用": 10,
+    "财务管理": 6,
+    "人工智能": 8,
+    "计算机科学与技术": 12,
+    "机械设计制造及其自动化": 5,
+    "电子信息工程": 4,
+    "金融学": 3,
+    "市场营销": 6,
+    "土木工程": 2,
+    "电子商务": 5,
+    "人力资源管理": 3,
+    "自动化": 6,
+    "视觉传达设计": 2,
+    "生物制药": 2,
+    "汉语言文学": 1
+  },
+  "readiness_distribution": {
+    "D": 15,
+    "C": 30,
+    "B": 35,
+    "A": 20
+  },
+  "profile_completed_count": 85,
+  "graduation_year_distribution": {
+    "2025": 10,
+    "2026": 65,
+    "2027": 25
+  },
+  "education_distribution": {
+    "本科": 88,
+    "硕士": 12
+  },
+  "demo_password": "Student@123",
+  "student_no_prefix": "SIM2026"
+}

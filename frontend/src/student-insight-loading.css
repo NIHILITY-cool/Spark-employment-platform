@@ -1,0 +1,15 @@
+.student-insight-workbench {
+  position: relative;
+}
+
+.student-insight-workbench.loading {
+  min-height: 340px;
+}
+
+.student-insight-workbench.loading::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  cursor: progress;
+}

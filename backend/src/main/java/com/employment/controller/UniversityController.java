@@ -24,8 +24,12 @@ public class UniversityController {
     }
 
     @GetMapping("/students")
-    public UniversityStudentInsightResponse students() {
-        return studentInsightService.overview();
+    public UniversityStudentInsightResponse students(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "all") String status) {
+        return studentInsightService.overview(page, size, keyword, status);
     }
 
     @GetMapping("/market-dashboard")

@@ -1,0 +1,36 @@
+.student-score.pending,
+.student-evidence-metrics strong.pending {
+  color: #71847f;
+  font-family: inherit;
+  font-size: 10px;
+}
+
+.student-list-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-top: 1px solid #dfe8e5;
+  color: #71847f;
+  font-size: 10px;
+}
+
+.student-list-pagination > div {
+  display: flex;
+  gap: 6px;
+}
+
+.student-list-pagination button {
+  width: 34px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d5e1dd;
+  background: #fff;
+  color: #516e69;
+}
+
+.student-list-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
