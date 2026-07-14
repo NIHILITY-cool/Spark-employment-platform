@@ -42,15 +42,18 @@ mysql -u root -p < ../database/schema.sql
 
 ### 学生画像
 - `POST /api/students` - 创建学生画像
-- `GET /api/students/{studentId}/profile` - 获取画像、技能和期望
+- `GET /api/students/{studentId}/profile` - 获取画像、技能、实践经历和期望
 - `PUT /api/students/{studentId}/profile` - 更新基本信息
 - `POST /api/students/{studentId}/skills` - 新增或更新技能等级（1-5）
 - `DELETE /api/students/{studentId}/skills/{skillId}` - 删除技能
+- `POST /api/students/{studentId}/experiences` - 新增项目、实习或获奖经历
+- `PUT /api/students/{studentId}/experiences/{experienceId}` - 编辑经历
+- `DELETE /api/students/{studentId}/experiences/{experienceId}` - 删除经历
 - `PUT /api/students/{studentId}/preference` - 保存就业期望
 
 ### 岗位
 - `GET /api/jobs` - 岗位搜索
-- `GET /api/jobs/{jobKey}` - 岗位详情与 Spark 提取技能
+- `GET /api/jobs/{jobKey}` - 岗位详情
 - `GET /api/jobs/filters` - 当前有效岗位的城市、岗位类别筛选项
 
 查询参数：`page`、`size`、`keyword`、`city`、`category`、`minSalary`、`maxSalary`。参数会校验范围，分页最大 100 条。
@@ -66,9 +69,9 @@ mysql -u root -p < ../database/schema.sql
 - `GET /api/recommendations/{jobKey}/match?studentId={id}` - 单岗位匹配详情
 - `GET /api/recommendations/skill-gap?studentId={id}` - 根据 Top10 计算技能差距
 
-推荐首版从 MySQL 中筛选至多 300 个有效候选岗位，综合技能、经历要求、期望岗位方向、学历、城市和薪资区间进行计算；岗位技能证据不足 3 个时会折减技能分。结果实时计算，不写回正式表。
+推荐从 MySQL 中稳定抽样至多 1500 个有效岗位，先按学生学历做硬过滤，再按实践经历、期望方向、城市、最低期望薪资、行业和岗位时效计算。方向证据不足的岗位不会进入有明确方向的 Top10；结果实时计算，不写回正式表。
 
-推荐响应返回 `skillScore`、`experienceScore`、`directionScore`、`educationScore`、`cityScore` 和 `salaryScore` 六个维度，前端据此展示可解释的匹配轨道。
+推荐响应保留兼容字段，但总分只采用六个维度和 `matchedExperienceTerms` 经历命中词。技能与学历不进入分数：学历是硬门槛，技能只保留在画像中。薪资只填写最低期望，高薪岗位不会因此扣分。
 
 ### 高校培养参考
 
@@ -76,7 +79,7 @@ mysql -u root -p < ../database/schema.sql
 
 当前支持数据科学与大数据技术、计算机科学与技术、软件工程、统计学和人工智能五个专业方向。接口基于 Spark 清洗并写入 MySQL 的岗位数据做即席聚合，不使用毕业生去向数据，也不输出培养质量结论。
 
-认证、项目/实习经历和高校聚合接口依赖尚未采集的学生业务数据，暂不对外宣称已实现，后续应在对应数据表与批处理结果准备后再接入。
+认证仍未接入；项目、实习和获奖经历由学生自主维护，不使用未经授权的外部学生数据。
 
 ## 测试方法
 

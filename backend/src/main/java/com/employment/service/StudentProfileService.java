@@ -3,12 +3,15 @@ package com.employment.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.employment.dto.JobPreferenceRequest;
 import com.employment.dto.StudentProfileRequest;
+import com.employment.dto.StudentExperienceRequest;
 import com.employment.dto.StudentSkillRequest;
 import com.employment.entity.JobPreference;
 import com.employment.entity.Student;
+import com.employment.entity.StudentExperience;
 import com.employment.entity.StudentSkill;
 import com.employment.mapper.JobPreferenceMapper;
 import com.employment.mapper.StudentMapper;
+import com.employment.mapper.StudentExperienceMapper;
 import com.employment.mapper.StudentSkillMapper;
 import com.employment.vo.StudentProfileResponse;
 import org.springframework.http.HttpStatus;
@@ -21,12 +24,15 @@ import java.util.List;
 public class StudentProfileService {
     private final StudentMapper studentMapper;
     private final StudentSkillMapper studentSkillMapper;
+    private final StudentExperienceMapper studentExperienceMapper;
     private final JobPreferenceMapper jobPreferenceMapper;
 
     public StudentProfileService(StudentMapper studentMapper, StudentSkillMapper studentSkillMapper,
+                                 StudentExperienceMapper studentExperienceMapper,
                                  JobPreferenceMapper jobPreferenceMapper) {
         this.studentMapper = studentMapper;
         this.studentSkillMapper = studentSkillMapper;
+        this.studentExperienceMapper = studentExperienceMapper;
         this.jobPreferenceMapper = jobPreferenceMapper;
     }
 
@@ -42,7 +48,9 @@ public class StudentProfileService {
         Student student = requiredStudent(studentId);
         List<StudentSkill> skills = studentSkillMapper.selectList(new QueryWrapper<StudentSkill>()
                 .eq("student_id", studentId).orderByDesc("skill_level").orderByAsc("skill_name"));
-        return new StudentProfileResponse(student, skills, jobPreferenceMapper.selectById(studentId));
+        List<StudentExperience> experiences = studentExperienceMapper.selectList(new QueryWrapper<StudentExperience>()
+                .eq("student_id", studentId).orderByDesc("end_date").orderByDesc("start_date").orderByDesc("id"));
+        return new StudentProfileResponse(student, skills, experiences, jobPreferenceMapper.selectById(studentId));
     }
 
     @Transactional
@@ -82,11 +90,37 @@ public class StudentProfileService {
     }
 
     @Transactional
+    public StudentExperience addExperience(Long studentId, StudentExperienceRequest request) {
+        requiredStudent(studentId);
+        StudentExperience experience = experienceFrom(studentId, request);
+        studentExperienceMapper.insert(experience);
+        return experience;
+    }
+
+    @Transactional
+    public StudentExperience updateExperience(Long studentId, Long experienceId, StudentExperienceRequest request) {
+        requiredStudent(studentId);
+        StudentExperience current = studentExperienceMapper.selectOne(new QueryWrapper<StudentExperience>()
+                .eq("id", experienceId).eq("student_id", studentId));
+        if (current == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "经历不存在");
+        StudentExperience experience = experienceFrom(studentId, request);
+        experience.id = current.id;
+        studentExperienceMapper.updateById(experience);
+        return experience;
+    }
+
+    @Transactional
+    public void deleteExperience(Long studentId, Long experienceId) {
+        requiredStudent(studentId);
+        if (studentExperienceMapper.delete(new QueryWrapper<StudentExperience>()
+                .eq("id", experienceId).eq("student_id", studentId)) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "经历不存在");
+        }
+    }
+
+    @Transactional
     public JobPreference savePreference(Long studentId, JobPreferenceRequest request) {
         requiredStudent(studentId);
-        if (request.salaryMin() != null && request.salaryMax() != null && request.salaryMin() > request.salaryMax()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "期望最低薪资不能高于最高薪资");
-        }
         JobPreference preference = jobPreferenceMapper.selectById(studentId);
         if (preference == null) preference = new JobPreference();
         preference.studentId = studentId;
@@ -94,7 +128,7 @@ public class StudentProfileService {
         preference.expectedCity = normalizeCity(request.expectedCity());
         preference.expectedIndustry = trim(request.expectedIndustry());
         preference.salaryMin = request.salaryMin();
-        preference.salaryMax = request.salaryMax();
+        preference.salaryMax = null;
         preference.acceptRemoteCity = Boolean.TRUE.equals(request.acceptRemoteCity());
         if (jobPreferenceMapper.selectById(studentId) == null) jobPreferenceMapper.insert(preference);
         else jobPreferenceMapper.updateById(preference);
@@ -116,6 +150,23 @@ public class StudentProfileService {
         student.education = request.education().trim();
         student.graduationYear = request.graduationYear();
         return student;
+    }
+
+    private StudentExperience experienceFrom(Long studentId, StudentExperienceRequest request) {
+        if (request.startDate() != null && request.endDate() != null
+                && request.endDate().isBefore(request.startDate())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "结束时间不能早于开始时间");
+        }
+        StudentExperience experience = new StudentExperience();
+        experience.studentId = studentId;
+        experience.experienceType = request.experienceType();
+        experience.title = request.title().trim();
+        experience.organization = trim(request.organization());
+        experience.role = trim(request.role());
+        experience.description = request.description().trim();
+        experience.startDate = request.startDate();
+        experience.endDate = request.endDate();
+        return experience;
     }
 
     private String trim(String value) { return value == null ? "" : value.trim(); }

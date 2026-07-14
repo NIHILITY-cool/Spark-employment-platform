@@ -10,7 +10,6 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const job = computed(() => props.detail?.job || null)
-const skills = computed(() => props.detail?.skills || [])
 
 function salary(item) {
   if (!item?.salaryMin || !item?.salaryMax) return item?.salaryRaw || '薪资面议'
@@ -48,13 +47,6 @@ function valueOrFallback(value, fallback = '未说明') {
             <div v-if="loading" class="job-detail-skeleton" aria-label="正在加载岗位描述"><i></i><i></i><i></i><i></i></div>
             <p v-else class="job-description">{{ valueOrFallback(job.jobDescription, '该岗位暂未提供完整描述。') }}</p>
             <p v-if="error" class="job-detail-error">{{ error }}，当前展示的是岗位列表中的基础信息。</p>
-          </section>
-
-          <section class="job-detail-section">
-            <div class="job-detail-section-head"><h3>岗位技能</h3><span>{{ skills.length }} 项提取结果</span></div>
-            <div v-if="loading" class="job-skill-skeleton"><i v-for="item in 5" :key="item"></i></div>
-            <div v-else-if="skills.length" class="job-skill-tags"><span v-for="skill in skills" :key="skill.skillName">{{ skill.skillName }}</span></div>
-            <p v-else class="job-description muted">暂无可展示的技能提取结果。</p>
           </section>
 
           <section class="job-detail-footnote">

@@ -1,5 +1,6 @@
 package com.employment.controller;
 
+import com.employment.dto.IndustrySalaryResponse;
 import com.employment.dto.TrainingAlignmentResponse;
 import com.employment.service.UniversityAnalysisService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,5 +22,10 @@ public class UniversityController {
             @RequestParam(defaultValue = "数据科学与大数据技术") String major,
             @RequestParam(required = false) String city) {
         return universityAnalysisService.trainingAlignment(major, city);
+    }
+
+    @GetMapping("/industry-salary-distribution")
+    public IndustrySalaryResponse industrySalaryDistribution(@RequestParam(required = false) String city) {
+        return universityAnalysisService.industrySalaryDistribution(city);
     }
 }

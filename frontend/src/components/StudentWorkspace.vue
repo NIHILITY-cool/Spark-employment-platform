@@ -10,9 +10,9 @@ import {
   CircleAlert,
   ExternalLink,
   GraduationCap,
-  Lightbulb,
   LoaderCircle,
   MapPin,
+  Pencil,
   Plus,
   RefreshCw,
   Save,
@@ -24,6 +24,7 @@ import {
   X,
 } from '@lucide/vue'
 import { apiRequest } from '../api/client'
+import DatePicker from './DatePicker.vue'
 import SearchSelect from './SearchSelect.vue'
 
 const props = defineProps({
@@ -50,10 +51,21 @@ const preference = reactive({
   acceptRemoteCity: true,
 })
 const skills = ref([])
+const skillPage = ref(1)
+const experiences = ref([])
 const recommendations = ref([])
-const skillGap = ref(null)
 const newSkill = reactive({ skillName: '', skillLevel: 3 })
+const experienceDraft = reactive({
+  id: null, experienceType: 'project', title: '', organization: '', role: '',
+  description: '', startDate: '', endDate: '',
+})
 const educationOptions = ['专科', '本科', '硕士', '博士', 'Bachelor']
+const SKILLS_PER_PAGE = 7
+const experienceTypes = [
+  { value: 'project', label: '项目经历' },
+  { value: 'internship', label: '实习经历' },
+  { value: 'award', label: '获奖经历' },
+]
 
 const averageScore = computed(() => {
   if (!recommendations.value.length) return 0
@@ -62,16 +74,19 @@ const averageScore = computed(() => {
 const profileCompletion = computed(() => {
   const fields = [profile.name, profile.college, profile.major, profile.education, preference.expectedJob, preference.expectedCity]
   const filled = fields.filter((value) => String(value || '').trim()).length
-  return Math.round((filled + Math.min(skills.value.length, 3)) / 9 * 100)
+  return Math.round((filled + Math.min(experiences.value.length, 2) + Math.min(skills.value.length, 2)) / 10 * 100)
 })
+const skillPageCount = computed(() => Math.max(1, Math.ceil(skills.value.length / SKILLS_PER_PAGE)))
+const visibleSkills = computed(() => skills.value.slice((skillPage.value - 1) * SKILLS_PER_PAGE, skillPage.value * SKILLS_PER_PAGE))
+const topExperienceTerms = computed(() => [...new Set(recommendations.value.flatMap((item) => item.matchedExperienceTerms || []))].slice(0, 6))
 
 const dimensions = [
-  { key: 'skillScore', label: '技能', max: 40, color: '#43826f' },
-  { key: 'experienceScore', label: '经历', max: 20, color: '#eb7954' },
-  { key: 'directionScore', label: '方向', max: 15, color: '#6b638d' },
-  { key: 'educationScore', label: '学历', max: 10, color: '#2f7094' },
+  { key: 'experienceScore', label: '经历', max: 40, color: '#eb7954' },
+  { key: 'directionScore', label: '方向', max: 30, color: '#6b638d' },
   { key: 'cityScore', label: '城市', max: 10, color: '#89a842' },
-  { key: 'salaryScore', label: '薪资', max: 5, color: '#c7903d' },
+  { key: 'industryScore', label: '行业', max: 5, color: '#9b6d8f' },
+  { key: 'salaryScore', label: '薪资', max: 10, color: '#c7903d' },
+  { key: 'freshnessScore', label: '时效', max: 5, color: '#557985' },
 ]
 
 watch(() => props.initialTab, (value) => {
@@ -91,6 +106,8 @@ function applyProfile(payload) {
     acceptRemoteCity: true, ...(payload.preference || {}),
   })
   skills.value = payload.skills || []
+  if (skillPage.value > Math.max(1, Math.ceil(skills.value.length / SKILLS_PER_PAGE))) skillPage.value = 1
+  experiences.value = payload.experiences || []
 }
 
 async function loadProfile() {
@@ -99,12 +116,7 @@ async function loadProfile() {
 }
 
 async function loadRecommendations() {
-  const [items, gap] = await Promise.all([
-    apiRequest(props.apiBase, `/recommendations/top10?studentId=${props.studentId}`),
-    apiRequest(props.apiBase, `/recommendations/skill-gap?studentId=${props.studentId}`),
-  ])
-  recommendations.value = items
-  skillGap.value = gap
+  recommendations.value = await apiRequest(props.apiBase, `/recommendations/top10?studentId=${props.studentId}`)
 }
 
 async function loadWorkspace() {
@@ -119,34 +131,24 @@ async function loadWorkspace() {
   }
 }
 
-async function saveProfile() {
-  saving.value = 'profile'
+async function saveIdentity() {
+  saving.value = 'identity'
   error.value = ''
   try {
-    await apiRequest(props.apiBase, `/students/${props.studentId}/profile`, {
-      method: 'PUT', body: JSON.stringify(profile),
-    })
-    showNotice('个人信息已保存')
-  } catch (cause) {
-    error.value = cause.message
-  } finally {
-    saving.value = ''
-  }
-}
-
-async function savePreference() {
-  saving.value = 'preference'
-  error.value = ''
-  try {
-    await apiRequest(props.apiBase, `/students/${props.studentId}/preference`, {
-      method: 'PUT', body: JSON.stringify({
-        ...preference,
-        salaryMin: Number(preference.salaryMin) || null,
-        salaryMax: Number(preference.salaryMax) || null,
+    await Promise.all([
+      apiRequest(props.apiBase, `/students/${props.studentId}/profile`, {
+        method: 'PUT', body: JSON.stringify(profile),
       }),
-    })
+      apiRequest(props.apiBase, `/students/${props.studentId}/preference`, {
+        method: 'PUT', body: JSON.stringify({
+          ...preference,
+          salaryMin: Number(preference.salaryMin) || null,
+          salaryMax: null,
+        }),
+      }),
+    ])
     await loadRecommendations()
-    showNotice('就业期望已保存，推荐结果已更新')
+    showNotice('个人画像已保存，推荐结果已更新')
   } catch (cause) {
     error.value = cause.message
   } finally {
@@ -182,6 +184,74 @@ async function removeSkill(skill) {
     await apiRequest(props.apiBase, `/students/${props.studentId}/skills/${skill.id}`, { method: 'DELETE' })
     await Promise.all([loadProfile(), loadRecommendations()])
     showNotice(`已移除 ${skill.skillName}`)
+  } catch (cause) {
+    error.value = cause.message
+  } finally {
+    saving.value = ''
+  }
+}
+
+function experienceTypeLabel(type) {
+  return experienceTypes.find((item) => item.value === type)?.label || '实践经历'
+}
+
+function resetExperienceDraft() {
+  Object.assign(experienceDraft, {
+    id: null, experienceType: 'project', title: '', organization: '', role: '',
+    description: '', startDate: '', endDate: '',
+  })
+}
+
+function editExperience(experience) {
+  Object.assign(experienceDraft, {
+    id: experience.id,
+    experienceType: experience.experienceType,
+    title: experience.title || '',
+    organization: experience.organization || '',
+    role: experience.role || '',
+    description: experience.description || '',
+    startDate: experience.startDate || '',
+    endDate: experience.endDate || '',
+  })
+  document.querySelector('.experience-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+async function saveExperience() {
+  if (!experienceDraft.title.trim() || !experienceDraft.description.trim()) return
+  saving.value = 'experience'
+  error.value = ''
+  try {
+    const path = experienceDraft.id
+      ? `/students/${props.studentId}/experiences/${experienceDraft.id}`
+      : `/students/${props.studentId}/experiences`
+    await apiRequest(props.apiBase, path, {
+      method: experienceDraft.id ? 'PUT' : 'POST',
+      body: JSON.stringify({
+        ...experienceDraft,
+        id: undefined,
+        startDate: experienceDraft.startDate || null,
+        endDate: experienceDraft.endDate || null,
+      }),
+    })
+    const message = experienceDraft.id ? '经历已更新，推荐结果已重算' : '经历已加入画像，推荐结果已重算'
+    resetExperienceDraft()
+    await Promise.all([loadProfile(), loadRecommendations()])
+    showNotice(message)
+  } catch (cause) {
+    error.value = cause.message
+  } finally {
+    saving.value = ''
+  }
+}
+
+async function removeExperience(experience) {
+  saving.value = `experience-${experience.id}`
+  error.value = ''
+  try {
+    await apiRequest(props.apiBase, `/students/${props.studentId}/experiences/${experience.id}`, { method: 'DELETE' })
+    if (experienceDraft.id === experience.id) resetExperienceDraft()
+    await Promise.all([loadProfile(), loadRecommendations()])
+    showNotice('经历已移除，推荐结果已重算')
   } catch (cause) {
     error.value = cause.message
   } finally {
@@ -232,7 +302,7 @@ onMounted(loadWorkspace)
       <div class="workspace-metrics" aria-label="画像与推荐摘要">
         <div><strong>{{ profileCompletion }}%</strong><span>画像完整度</span></div>
         <div><strong>{{ averageScore }}</strong><span>Top10 平均分</span></div>
-        <div><strong>{{ skills.length }}</strong><span>已登记技能</span></div>
+        <div><strong>{{ experiences.length }}</strong><span>实践证据</span></div>
       </div>
     </div>
 
@@ -251,13 +321,14 @@ onMounted(loadWorkspace)
     <div v-if="loading" class="workspace-loading"><LoaderCircle :size="28" /><span>正在读取学生画像与推荐结果</span></div>
 
     <div v-else-if="activeTab === 'profile'" class="profile-layout">
-      <form class="editor-section" @submit.prevent="saveProfile">
+      <form class="editor-section identity-editor" @submit.prevent="saveIdentity">
         <div class="editor-heading">
           <div><span>01</span><h2>个人信息</h2></div>
-          <button class="command primary" type="submit" :disabled="saving === 'profile'">
-            <LoaderCircle v-if="saving === 'profile'" class="spin" :size="16" /><Save v-else :size="16" />保存信息
+          <button class="command primary" type="submit" :disabled="saving === 'identity'">
+            <LoaderCircle v-if="saving === 'identity'" class="spin" :size="16" /><Save v-else :size="16" />保存并重算
           </button>
         </div>
+        <p class="identity-group-title">基本资料</p>
         <div class="form-grid">
           <label><span>姓名</span><input v-model="profile.name" required placeholder="填写姓名" /></label>
           <label><span>学号</span><input v-model="profile.studentNo" placeholder="填写学号" /></label>
@@ -265,6 +336,14 @@ onMounted(loadWorkspace)
           <label><span>专业</span><input v-model="profile.major" required placeholder="例如：数据科学" /></label>
           <label><span>学历</span><SearchSelect v-model="profile.education" label="学历" placeholder="搜索学历" empty-label="清除学历" :options="educationOptions" /></label>
           <label><span>毕业年份</span><input v-model.number="profile.graduationYear" required type="number" min="2024" max="2100" /></label>
+        </div>
+        <p class="identity-group-title">就业期望</p>
+        <div class="form-grid">
+          <label><span>岗位方向</span><SearchSelect v-model="preference.expectedJob" label="岗位方向" placeholder="搜索岗位方向" empty-label="不限方向" :options="categoryOptions" /></label>
+          <label><span>期望城市</span><SearchSelect v-model="preference.expectedCity" label="期望城市" placeholder="搜索期望城市" empty-label="不限城市" :options="cityOptions" /></label>
+          <label><span>期望行业</span><input v-model="preference.expectedIndustry" placeholder="可选" /></label>
+          <label><span>期望最低月薪</span><input v-model.number="preference.salaryMin" type="number" min="0" step="1000" placeholder="例如 8000" /></label>
+          <label class="switch-field"><input v-model="preference.acceptRemoteCity" type="checkbox" /><span class="switch-track"><i></i></span><b>接受其他城市机会</b></label>
         </div>
       </form>
 
@@ -276,49 +355,79 @@ onMounted(loadWorkspace)
           <button class="icon-command add-skill" type="submit" title="添加技能" :disabled="saving === 'skill' || !newSkill.skillName.trim()"><Plus :size="18" /></button>
         </form>
         <div v-if="skills.length" class="skill-list">
-          <div v-for="skill in skills" :key="skill.id" class="skill-row">
+          <div v-for="skill in visibleSkills" :key="skill.id" class="skill-row">
             <div><strong>{{ skill.skillName }}</strong><span>LEVEL {{ skill.skillLevel }}</span></div>
             <div class="level-dots" :aria-label="`技能等级 ${skill.skillLevel}`"><i v-for="level in 5" :key="level" :class="{ filled: level <= skill.skillLevel }"></i></div>
             <button class="icon-command danger" type="button" :title="`移除 ${skill.skillName}`" :disabled="saving === `skill-${skill.id}`" @click="removeSkill(skill)"><Trash2 :size="16" /></button>
           </div>
+          <div v-if="skillPageCount > 1" class="skill-pagination">
+            <button class="icon-command" type="button" title="上一页技能" :disabled="skillPage === 1" @click="skillPage--"><ArrowLeft :size="15" /></button>
+            <span>第 {{ skillPage }} / {{ skillPageCount }} 页</span>
+            <button class="icon-command" type="button" title="下一页技能" :disabled="skillPage === skillPageCount" @click="skillPage++"><ArrowRight :size="15" /></button>
+          </div>
         </div>
-        <div v-else class="inline-empty"><BookOpenCheck :size="22" /><span>添加技能后才能计算岗位能力覆盖。</span></div>
+        <div v-else class="inline-empty"><BookOpenCheck :size="22" /><span>暂未登记个人技能。</span></div>
       </section>
 
-      <form class="editor-section preference-editor" @submit.prevent="savePreference">
+      <section class="editor-section evidence-editor">
         <div class="editor-heading">
-          <div><span>03</span><h2>就业期望</h2></div>
-          <button class="command primary" type="submit" :disabled="saving === 'preference'">
-            <LoaderCircle v-if="saving === 'preference'" class="spin" :size="16" /><Target v-else :size="16" />保存并重算
-          </button>
+          <div><span>03</span><h2>实践与成果</h2></div>
+          <small>经历相关性占匹配分 40%</small>
         </div>
-        <div class="form-grid preference-grid">
-          <label><span>岗位方向</span><SearchSelect v-model="preference.expectedJob" label="岗位方向" placeholder="搜索岗位方向" empty-label="不限方向" :options="categoryOptions" /></label>
-          <label><span>期望城市</span><SearchSelect v-model="preference.expectedCity" label="期望城市" placeholder="搜索期望城市" empty-label="不限城市" :options="cityOptions" /></label>
-          <label><span>期望行业</span><input v-model="preference.expectedIndustry" placeholder="可选" /></label>
-          <label><span>最低月薪</span><input v-model.number="preference.salaryMin" type="number" min="0" step="1000" /></label>
-          <label><span>最高月薪</span><input v-model.number="preference.salaryMax" type="number" min="0" step="1000" /></label>
-          <label class="switch-field"><input v-model="preference.acceptRemoteCity" type="checkbox" /><span class="switch-track"><i></i></span><b>接受其他城市机会</b></label>
+        <form class="experience-form" @submit.prevent="saveExperience">
+          <div class="experience-type-control" aria-label="经历类型">
+            <button v-for="type in experienceTypes" :key="type.value" type="button" :class="{ active: experienceDraft.experienceType === type.value }" :aria-pressed="experienceDraft.experienceType === type.value" @click="experienceDraft.experienceType = type.value">{{ type.label }}</button>
+          </div>
+          <div class="experience-fields">
+            <label><span>名称</span><input v-model="experienceDraft.title" required :placeholder="experienceDraft.experienceType === 'award' ? '例如：全国大学生数据竞赛一等奖' : '例如：校园就业数据分析平台'" /></label>
+            <label><span>{{ experienceDraft.experienceType === 'award' ? '颁发单位' : '组织 / 单位' }}</span><input v-model="experienceDraft.organization" placeholder="学校、实验室或企业" /></label>
+            <label><span>{{ experienceDraft.experienceType === 'award' ? '奖项级别' : '承担角色' }}</span><input v-model="experienceDraft.role" :placeholder="experienceDraft.experienceType === 'award' ? '国家级 / 省级 / 校级' : '负责人 / 后端开发 / 数据分析'" /></label>
+            <label class="experience-date"><span>开始时间</span><DatePicker v-model="experienceDraft.startDate" label="开始时间" /></label>
+            <label class="experience-date"><span>结束时间</span><DatePicker v-model="experienceDraft.endDate" label="结束时间" /></label>
+            <label class="experience-description"><span>职责与成果</span><textarea v-model="experienceDraft.description" rows="3" required placeholder="写清做了什么、使用了什么方法，以及可验证的结果，例如：负责 SQL 数据分析，上线后报表效率提升 30%"></textarea></label>
+          </div>
+          <div class="experience-actions">
+            <button v-if="experienceDraft.id" class="command secondary" type="button" @click="resetExperienceDraft"><X :size="15" />取消编辑</button>
+            <button class="command primary" type="submit" :disabled="saving === 'experience' || !experienceDraft.title.trim() || !experienceDraft.description.trim()">
+              <LoaderCircle v-if="saving === 'experience'" class="spin" :size="16" /><Save v-else-if="experienceDraft.id" :size="16" /><Plus v-else :size="16" />{{ experienceDraft.id ? '保存修改' : '添加经历' }}
+            </button>
+          </div>
+        </form>
+        <div v-if="experiences.length" class="experience-list">
+          <article v-for="experience in experiences" :key="experience.id" class="experience-row">
+            <span class="experience-kind">{{ experienceTypeLabel(experience.experienceType) }}</span>
+            <div><strong>{{ experience.title }}</strong><small>{{ [experience.organization, experience.role].filter(Boolean).join(' · ') || '学生自主填写' }}</small><p>{{ experience.description }}</p></div>
+            <time>{{ experience.startDate || '未填时间' }}<template v-if="experience.endDate"> — {{ experience.endDate }}</template></time>
+            <div class="experience-row-actions">
+              <button class="icon-command" type="button" :title="`编辑 ${experience.title}`" @click="editExperience(experience)"><Pencil :size="15" /></button>
+              <button class="icon-command danger" type="button" :title="`删除 ${experience.title}`" :disabled="saving === `experience-${experience.id}`" @click="removeExperience(experience)"><Trash2 :size="15" /></button>
+            </div>
+          </article>
         </div>
-      </form>
+        <div v-else class="inline-empty"><BriefcaseBusiness :size="22" /><span>添加项目、实习或获奖经历后，推荐会优先匹配岗位职责相关证据。</span></div>
+      </section>
+
     </div>
 
     <div v-else class="recommendation-layout">
-      <aside class="gap-rail">
-        <div class="gap-heading"><Lightbulb :size="21" /><span>能力差距</span></div>
-        <p>{{ skillGap?.suggestion || '完善技能后生成提升建议。' }}</p>
-        <div class="gap-group"><span>已掌握</span><div><b v-for="skill in skillGap?.masteredSkills" :key="skill" class="mastered">{{ skill }}</b></div></div>
-        <div class="gap-group"><span>优先补齐</span><div><b v-for="skill in skillGap?.missingSkills" :key="skill" class="missing">{{ skill }}</b></div></div>
-        <button class="command secondary" type="button" @click="activeTab = 'profile'"><Plus :size="16" />更新技能画像</button>
+      <aside class="match-overview">
+        <div class="match-overview-head"><Target :size="19" /><span>匹配概况</span></div>
+        <dl>
+          <div><dt>求职方向</dt><dd>{{ preference.expectedJob || '不限方向' }}</dd></div>
+          <div><dt>最低月薪</dt><dd>{{ preference.salaryMin ? `${Math.round(preference.salaryMin / 1000)}K` : '未设置' }}</dd></div>
+          <div><dt>实践证据</dt><dd>{{ experiences.length }} 条</dd></div>
+        </dl>
+        <div class="overview-terms"><span>经历命中</span><div><b v-for="term in topExperienceTerms" :key="term">{{ term }}</b><i v-if="!topExperienceTerms.length">暂无</i></div></div>
+        <button class="command secondary" type="button" @click="activeTab = 'profile'"><Plus :size="16" />更新完整画像</button>
       </aside>
 
       <section class="recommendation-results">
         <div class="recommendation-head">
-          <div><p class="eyebrow">实时匹配 · 六维评分</p><h2>与你更接近的岗位</h2></div>
+          <div><p class="eyebrow">学历硬筛选 · 六维证据评分</p><h2>与你更接近的岗位</h2></div>
           <button class="icon-command refresh-command" type="button" title="刷新推荐" :disabled="saving === 'recommendations'" @click="refreshRecommendations"><RefreshCw :class="{ spin: saving === 'recommendations' }" :size="18" /></button>
         </div>
 
-        <div v-if="!recommendations.length" class="recommendation-empty"><BriefcaseBusiness :size="28" /><h3>还没有推荐结果</h3><p>先完善岗位方向和技能画像，再重新计算。</p><button class="command primary" @click="activeTab = 'profile'">完善画像<ArrowRight :size="16" /></button></div>
+        <div v-if="!recommendations.length" class="recommendation-empty"><BriefcaseBusiness :size="28" /><h3>还没有推荐结果</h3><p>先完善岗位方向和实践经历，再重新计算。</p><button class="command primary" @click="activeTab = 'profile'">完善画像<ArrowRight :size="16" /></button></div>
 
         <article v-for="(item, index) in recommendations" v-else :key="item.job.jobKey" class="recommendation-row" :class="{ expanded: expandedJob === item.job.jobKey }">
           <button class="recommendation-summary" type="button" :aria-expanded="expandedJob === item.job.jobKey" @click="toggleJob(item.job.jobKey)">
@@ -337,8 +446,8 @@ onMounted(loadWorkspace)
           </div>
           <div v-if="expandedJob === item.job.jobKey" class="recommendation-detail">
             <div><span>推荐依据</span><p>{{ item.recommendationReason }}</p></div>
-            <div><span>已匹配技能</span><p class="token-line"><b v-for="skill in item.matchedSkills" :key="skill" class="mastered">{{ skill }}</b><i v-if="!item.matchedSkills.length">暂无明确命中</i></p></div>
-            <div><span>待补技能</span><p class="token-line"><b v-for="skill in item.missingSkills" :key="skill" class="missing">{{ skill }}</b><i v-if="!item.missingSkills.length">当前抽取技能已覆盖</i></p></div>
+            <div><span>经历命中</span><p class="token-line"><b v-for="term in item.matchedExperienceTerms" :key="term" class="experience-match">{{ term }}</b><i v-if="!item.matchedExperienceTerms.length">暂无职责相关经历词</i></p></div>
+            <div><span>岗位门槛</span><p>{{ item.job.educationRequirement || '学历不限' }} · {{ item.job.experienceRequirement || '经验不限' }}</p></div>
             <a class="command secondary" :href="item.job.jobUrl" target="_blank" rel="noreferrer">查看原始岗位<ExternalLink :size="15" /></a>
           </div>
         </article>

@@ -1,11 +1,12 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ArrowDown, ArrowRight, ChartNoAxesCombined, ChevronLeft, ChevronRight, Clock3, Crosshair, GraduationCap, Heart, Home, MapPin, Search, Sparkles, UserRound } from '@lucide/vue'
 import RoleLanding from './components/RoleLanding.vue'
 import SearchSelect from './components/SearchSelect.vue'
 import StudentWorkspace from './components/StudentWorkspace.vue'
-import UniversityWorkspace from './components/UniversityWorkspace.vue'
 import JobDetailDrawer from './components/JobDetailDrawer.vue'
+
+const UniversityWorkspace = defineAsyncComponent(() => import('./components/UniversityWorkspace.vue'))
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
 const loading = ref(false)

@@ -5,9 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.employment.common.LocationScope;
 import com.employment.dto.JobFilterOptions;
 import com.employment.entity.Job;
-import com.employment.entity.JobSkill;
 import com.employment.mapper.JobMapper;
-import com.employment.mapper.JobSkillMapper;
 import com.employment.vo.JobDetailResponse;
 import com.employment.vo.PageResponse;
 import org.springframework.http.HttpStatus;
@@ -20,11 +18,9 @@ import java.util.Map;
 @Service
 public class JobQueryService {
     private final JobMapper jobMapper;
-    private final JobSkillMapper jobSkillMapper;
 
-    public JobQueryService(JobMapper jobMapper, JobSkillMapper jobSkillMapper) {
+    public JobQueryService(JobMapper jobMapper) {
         this.jobMapper = jobMapper;
-        this.jobSkillMapper = jobSkillMapper;
     }
 
     public PageResponse<Job> list(long page, long size, String keyword, String city, String category,
@@ -53,9 +49,7 @@ public class JobQueryService {
         if (job == null || !"active".equals(job.jobStatus)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "岗位不存在或已失效");
         }
-        List<JobSkill> skills = jobSkillMapper.selectList(new QueryWrapper<JobSkill>()
-                .eq("job_key", jobKey).orderByDesc("skill_weight").orderByAsc("skill_name"));
-        return new JobDetailResponse(job, skills);
+        return new JobDetailResponse(job);
     }
 
     public JobFilterOptions filters() {

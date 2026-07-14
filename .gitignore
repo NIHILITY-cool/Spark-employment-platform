@@ -19,6 +19,9 @@ venv/
 env/
 .env/
 
+# 本地报告资料（目录内每份资料单独建目录存放）
+source/
+
 # Node
 node_modules/
 dist/
@@ -53,3 +56,6 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+# 本地可复用设计笔记
+/DESIGN.md

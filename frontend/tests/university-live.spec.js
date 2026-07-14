@@ -6,14 +6,20 @@ test('university workspace renders the live Spark/MySQL aggregation', async ({ p
   await page.goto('/')
   const responsePromise = page.waitForResponse((response) =>
     response.url().includes('/api/university/training-alignment') && response.status() === 200)
+  const salaryResponsePromise = page.waitForResponse((response) =>
+    response.url().includes('/api/university/industry-salary-distribution') && response.status() === 200)
   await page.getByRole('button', { name: '进入高校端' }).click()
   const response = await responsePromise
   const payload = await response.json()
+  const salaryResponse = await salaryResponsePromise
+  const salaryPayload = await salaryResponse.json()
 
   expect(payload.summary.jobCount).toBeGreaterThan(0)
   expect(payload.regionalMatrix.length).toBeGreaterThan(0)
+  expect(salaryPayload.industries).toHaveLength(10)
   await expect(page.getByRole('heading', { name: '从市场需求反推训练重点。' })).toBeVisible()
   await expect(page.locator('.evidence-strip strong').first()).toHaveText(payload.summary.jobCount.toLocaleString())
   await expect(page.locator('.demand-skill-list button')).toHaveCount(payload.skills.length)
+  await expect(page.locator('.industry-salary-chart canvas')).toBeVisible()
   await page.screenshot({ path: '/tmp/university-workspace-live.png', fullPage: true })
 })

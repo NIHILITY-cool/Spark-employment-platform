@@ -2,9 +2,11 @@ package com.employment.controller;
 
 import com.employment.dto.JobPreferenceRequest;
 import com.employment.dto.StudentProfileRequest;
+import com.employment.dto.StudentExperienceRequest;
 import com.employment.dto.StudentSkillRequest;
 import com.employment.entity.JobPreference;
 import com.employment.entity.Student;
+import com.employment.entity.StudentExperience;
 import com.employment.entity.StudentSkill;
 import com.employment.service.StudentProfileService;
 import com.employment.vo.StudentProfileResponse;
@@ -49,6 +51,25 @@ public class StudentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteSkill(@PathVariable Long studentId, @PathVariable Long skillId) {
         studentProfileService.deleteSkill(studentId, skillId);
+    }
+
+    @PostMapping("/{studentId}/experiences")
+    @ResponseStatus(HttpStatus.CREATED)
+    public StudentExperience addExperience(@PathVariable Long studentId,
+                                           @Valid @RequestBody StudentExperienceRequest request) {
+        return studentProfileService.addExperience(studentId, request);
+    }
+
+    @PutMapping("/{studentId}/experiences/{experienceId}")
+    public StudentExperience updateExperience(@PathVariable Long studentId, @PathVariable Long experienceId,
+                                              @Valid @RequestBody StudentExperienceRequest request) {
+        return studentProfileService.updateExperience(studentId, experienceId, request);
+    }
+
+    @DeleteMapping("/{studentId}/experiences/{experienceId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteExperience(@PathVariable Long studentId, @PathVariable Long experienceId) {
+        studentProfileService.deleteExperience(studentId, experienceId);
     }
 
     @PutMapping("/{studentId}/preference")
