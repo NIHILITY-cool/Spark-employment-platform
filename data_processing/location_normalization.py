@@ -126,11 +126,9 @@ def resolve_city(city_value: object, district_value: object = "", description: o
     if extracted:
         return extracted, "city"
     raw_city = normalize_city_name(city_value)
-    if raw_city == "全国":
+    if raw_city == "全国" or is_province_level(raw_city):
         return raw_city, "province"
-    if is_province_level(raw_city) and LOCATION_LABEL_RE.search(clean_text(description)):
-        return raw_city, "province"
-    return UNKNOWN_CITY, "province" if is_province_level(raw_city) else "unknown"
+    return UNKNOWN_CITY, "unknown"
 
 
 def parse_zhilian_monthly_salary(value: object) -> tuple[int | None, int | None]:

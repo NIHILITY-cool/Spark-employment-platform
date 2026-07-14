@@ -20,8 +20,8 @@ def test_resolve_city_canonicalizes_embedded_city_names() -> None:
     assert resolve_city("宁波余姚市三七") == ("宁波", "city")
 
 
-def test_resolve_city_rejects_free_text_and_province_only_values() -> None:
-    assert resolve_city("广东省") == ("地点待定", "province")
+def test_resolve_city_preserves_province_scope_and_rejects_free_text() -> None:
+    assert resolve_city("广东省") == ("广东", "province")
     assert resolve_city("拓展海外") == ("地点待定", "unknown")
 
 
