@@ -85,14 +85,15 @@ onMounted(() => load(props.initialPage))
     <div class="student-insight-summary" aria-label="学生情况汇总">
       <div><span>注册学生</span><strong>{{ report.summary.studentCount || 0 }}</strong></div>
       <div><span>已完善画像</span><strong>{{ report.summary.profileCompletedCount || 0 }}</strong></div>
-      <div class="attention"><span>需重点关注</span><strong>{{ report.summary.difficultCount || 0 }}</strong></div>
+      <div class="attention"><span>重点支持（缺 3–4 项）</span><strong>{{ report.summary.difficultCount || 0 }}</strong></div>
       <div><span>本页平均匹配</span><strong>{{ report.summary.averageTopMatchScore || 0 }}<small> / 100</small></strong></div>
     </div>
 
     <div class="student-insight-controls">
       <label><Search :size="16" /><input v-model="keyword" aria-label="搜索学生" placeholder="搜索姓名、学号、学院或专业" /></label>
-      <div role="group" aria-label="学生状态筛选"><button type="button" :class="{ active: status === 'all' }" @click="setStatus('all')">全部</button><button type="button" :class="{ active: status === 'difficult' }" @click="setStatus('difficult')">困难学生</button><button type="button" :class="{ active: status === 'normal' }" @click="setStatus('normal')">常规跟进</button></div>
+      <div role="group" aria-label="资料完整度筛选"><button type="button" :class="{ active: status === 'all' }" @click="setStatus('all')">全部</button><button type="button" :class="{ active: status === 'support' }" @click="setStatus('support')">重点支持</button><button type="button" :class="{ active: status === 'incomplete' }" @click="setStatus('incomplete')">待完善</button><button type="button" :class="{ active: status === 'complete' }" @click="setStatus('complete')">资料完整</button></div>
     </div>
+    <p class="student-status-rule">划分依据：画像、技能、经历、就业期望共 4 项；缺 3–4 项为重点支持，缺 1–2 项为待完善，全部具备为资料完整。资料完整后，匹配分低于 65 为常规跟进，达到 65 为匹配较好。</p>
 
     <p v-if="error" class="student-insight-error">{{ error }}</p>
 

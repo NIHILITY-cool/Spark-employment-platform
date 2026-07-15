@@ -77,13 +77,13 @@ mysql -u root -p < ../database/schema.sql
 
 推荐响应保留兼容字段，但总分只采用六个维度和 `matchedExperienceTerms` 经历命中词。技能与学历不进入分数：学历是硬门槛，技能只保留在画像中。薪资只填写最低期望，高薪岗位不会因此扣分。
 
-### 高校培养参考
+### 高校就业分析
 
 - `GET /api/university/market-dashboard` - 高校端市场看板聚合，返回总览 KPI、岗位大类、地区类别结构、城市行业热力、薪资学历、技能需求和数据质量
-- `GET /api/university/training-alignment?major={专业}&city={地区}` - 读取专业对应的公开岗位样本、低经验门槛岗位、薪资、行业、学历、技能和地区岗位方向矩阵
 - `GET /api/university/industry-salary-distribution?city={地区}` - 按岗位文本规则聚合十大行业薪资档位、有效薪资样本和平均月薪
+- `GET /api/university/students?page={页码}&size={数量}&status={状态}` - 学生情况分页、搜索、资料完整度分层和岗位匹配证据
 
-当前支持数据科学与大数据技术、计算机科学与技术、软件工程、统计学和人工智能五个专业方向。接口基于 Spark 清洗并写入 MySQL 的岗位数据做即席聚合，不使用毕业生去向数据，也不输出培养质量结论。
+接口基于 Spark 清洗并写入 MySQL 的岗位数据及授权学生画像进行聚合，不使用毕业生去向数据，也不输出培养质量结论。
 
 学生、高校和管理员接口均已接入角色认证；项目、实习和获奖经历由学生自主维护，不使用未经授权的外部学生数据。
 

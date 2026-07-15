@@ -25,7 +25,6 @@ import chinaGeoJson from '../assets/china.geo.json'
 import SearchSelect from './SearchSelect.vue'
 
 const IndustrySalaryPanel = defineAsyncComponent(() => import('./IndustrySalaryPanel.vue'))
-const TrainingAlignmentPanel = defineAsyncComponent(() => import('./TrainingAlignmentPanel.vue'))
 const UniversityStudentOverview = defineAsyncComponent(() => import('./UniversityStudentOverview.vue'))
 
 echarts.use([
@@ -89,7 +88,6 @@ const tabs = [
   { key: 'demand', label: '岗位需求' },
   { key: 'region', label: '地区行业' },
   { key: 'salary', label: '薪资技能' },
-  { key: 'training', label: '专业方向' },
   { key: 'students', label: '学生情况' },
 ]
 
@@ -118,7 +116,7 @@ const regionExplorerModes = [
 const salaryInsightModes = [
   { key: 'salary', label: '薪资', hint: '查看薪资区间分布和当前筛选下的主要薪资段。' },
   { key: 'education', label: '学历', hint: '查看学历门槛分布，辅助判断岗位进入门槛。' },
-  { key: 'skills', label: '技能', hint: '查看高频技能信号，和专业方向页形成衔接。' },
+  { key: 'skills', label: '技能', hint: '查看高频技能信号，作为岗位训练需求参考。' },
 ]
 
 const defaultRegionProfile = {
@@ -1501,7 +1499,7 @@ onBeforeUnmount(() => {
       <button v-for="tab in tabs" :key="tab.key" type="button" :class="{ active: activeTab === tab.key }" @click="selectTab(tab.key)">{{ tab.label }}</button>
     </nav>
 
-    <form v-if="!['training', 'students'].includes(activeTab)" class="dashboard-controls" @submit.prevent="loadDashboard">
+    <form v-if="activeTab !== 'students'" class="dashboard-controls" @submit.prevent="loadDashboard">
       <label v-if="showFilter('keyword')" class="dashboard-search"><Search :size="16" /><input v-model="filters.keyword" placeholder="搜索岗位、企业或技能" /></label>
       <SearchSelect v-if="showFilter('city')" v-model="filters.city" class="analysis-picker" label="地区筛选" placeholder="搜索省份或城市" empty-label="全部地区" :options="regionOptions" />
       <SearchSelect v-if="showFilter('industry')" v-model="filters.industry" class="analysis-picker" label="行业筛选" placeholder="搜索行业" empty-label="全部行业" :options="industryOptions" />
@@ -1512,14 +1510,14 @@ onBeforeUnmount(() => {
       <button class="command secondary" type="button" @click="resetFilters">重置</button>
     </form>
 
-    <section v-if="!['training', 'students'].includes(activeTab) && activeFilterChips.length" class="filter-status">
+    <section v-if="activeTab !== 'students' && activeFilterChips.length" class="filter-status">
       <div class="filter-chips">
         <button v-for="item in activeFilterChips" :key="item.label" type="button" @click="clearFilter({ 关键词: 'keyword', 地区: 'city', 行业: 'industry', 学历: 'education', 岗位方向: 'category', 企业规模: 'companyScale' }[item.label])">{{ item.label }}：{{ item.value }}</button>
       </div>
     </section>
 
-    <div v-if="sourceNotice && !['training', 'students'].includes(activeTab)" class="university-info"><CircleAlert :size="18" /><span>{{ sourceNotice }}</span></div>
-    <div v-if="loading && !dashboard && !['training', 'students'].includes(activeTab)" class="workspace-loading"><LoaderCircle :size="28" /><span>正在聚合高校端市场看板</span></div>
+    <div v-if="sourceNotice && activeTab !== 'students'" class="university-info"><CircleAlert :size="18" /><span>{{ sourceNotice }}</span></div>
+    <div v-if="loading && !dashboard && activeTab !== 'students'" class="workspace-loading"><LoaderCircle :size="28" /><span>正在聚合高校端市场看板</span></div>
 
     <template v-if="activeTab === 'overview'">
       <section class="dashboard-kpis" aria-label="高校端核心指标">
@@ -1795,7 +1793,7 @@ onBeforeUnmount(() => {
             <template v-else>
               <span>当前技能</span>
               <strong>{{ selectedSkillMetric?.key || '暂无' }}</strong>
-              <p>{{ formatNumber(selectedSkillMetric?.jobCount) }} 个岗位提及。这里作为专业方向页的前置观察，不再单独占一整页。</p>
+              <p>{{ formatNumber(selectedSkillMetric?.jobCount) }} 个岗位提及，可作为岗位训练需求的辅助参考。</p>
               <div class="tag-row"><em v-for="item in current.hotSkills.slice(0, 6)" :key="item.key">{{ item.key }} {{ formatNumber(item.jobCount) }}</em></div>
             </template>
           </aside>
@@ -1821,7 +1819,6 @@ onBeforeUnmount(() => {
       </section>
     </template>
 
-    <TrainingAlignmentPanel v-else-if="activeTab === 'training'" :api-base="props.apiBase" :city-options="regionOptions" @back-to-portal="emit('logout')" />
     <UniversityStudentOverview v-else :api-base="props.apiBase" :initial-page="props.initialStudentPage" @page-change="emit('student-page-change', $event)" />
   </section>
 </template>

@@ -111,8 +111,9 @@ public class UniversityStudentInsightService {
             arguments.add(like);
             arguments.add(like);
         }
-        if ("difficult".equals(status)) sql.append(" AND (").append(BASIC_GAP_COUNT).append(") >= 3");
-        if ("normal".equals(status)) sql.append(" AND (").append(BASIC_GAP_COUNT).append(") < 3");
+        if ("support".equals(status)) sql.append(" AND (").append(BASIC_GAP_COUNT).append(") >= 3");
+        if ("incomplete".equals(status)) sql.append(" AND (").append(BASIC_GAP_COUNT).append(") BETWEEN 1 AND 2");
+        if ("complete".equals(status)) sql.append(" AND (").append(BASIC_GAP_COUNT).append(") = 0");
         return sql.toString();
     }
 
@@ -126,6 +127,7 @@ public class UniversityStudentInsightService {
         else evidence.add("已维护 " + row.experienceCount() + " 条实践经历");
         if (!row.preferenceSaved()) gaps.add("未保存就业期望");
         else evidence.add("已保存就业方向与地区偏好");
+        int profileGapCount = gaps.size();
 
         List<JobRecommendation> recommendations = row.profileCompleted() && row.preferenceSaved()
                 ? safeRecommendations(row.studentId()) : List.of();
@@ -141,11 +143,11 @@ public class UniversityStudentInsightService {
         } else if (row.profileCompleted() && row.preferenceSaved()) {
             gaps.add("当前岗位批次暂无满足学历门槛的候选岗位");
         }
-        boolean difficult = gaps.size() >= 3 || (topScore > 0 && topScore < 50);
-        String state = difficult ? "需重点关注"
-                : !row.profileCompleted() ? "待完善画像"
-                : best == null ? "信息待补充"
-                : topScore >= 65 ? "匹配较好" : "准备中";
+        boolean difficult = profileGapCount >= 3;
+        String state = difficult ? "重点支持"
+                : profileGapCount > 0 ? "待完善资料"
+                : best == null ? "暂无匹配"
+                : topScore >= 65 ? "匹配较好" : "常规跟进";
         return new UniversityStudentInsight(row.studentId(), row.studentNo(), row.name(), row.college(), row.major(),
                 row.education(), row.graduationYear(), row.profileCompleted(), row.lastSavedAt(), row.skillCount(),
                 row.experienceCount(), row.preferenceSaved(), topScore, averageScore,
@@ -163,7 +165,9 @@ public class UniversityStudentInsightService {
 
     private static String normalizeStatus(String value) {
         String normalized = value == null ? "all" : value.trim().toLowerCase(Locale.ROOT);
-        return List.of("all", "difficult", "normal").contains(normalized) ? normalized : "all";
+        if ("difficult".equals(normalized)) return "support";
+        if ("normal".equals(normalized)) return "complete";
+        return List.of("all", "support", "incomplete", "complete").contains(normalized) ? normalized : "all";
     }
 
     private static long number(Map<String, Object> row, String key) {

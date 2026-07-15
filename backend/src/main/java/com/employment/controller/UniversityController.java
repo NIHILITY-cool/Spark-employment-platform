@@ -1,7 +1,6 @@
 package com.employment.controller;
 
 import com.employment.dto.IndustrySalaryResponse;
-import com.employment.dto.TrainingAlignmentResponse;
 import com.employment.dto.UniversityMarketDashboardResponse;
 import com.employment.service.UniversityAnalysisService;
 import com.employment.service.UniversityStudentInsightService;
@@ -44,13 +43,6 @@ public class UniversityController {
             @RequestParam(required = false) Integer maxSalary) {
         return universityAnalysisService.marketDashboard(city, industry, education, category,
                 companyScale, keyword, minSalary, maxSalary);
-    }
-
-    @GetMapping("/training-alignment")
-    public TrainingAlignmentResponse trainingAlignment(
-            @RequestParam(defaultValue = "数据科学与大数据技术") String major,
-            @RequestParam(required = false) String city) {
-        return universityAnalysisService.trainingAlignment(major, city);
     }
 
     @GetMapping("/industry-salary-distribution")

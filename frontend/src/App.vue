@@ -21,7 +21,7 @@ const STUDENT_PATHS = {
   profile: '/student/profile',
   recommendations: '/student/recommendations',
 }
-const UNIVERSITY_TABS = new Set(['overview', 'demand', 'region', 'salary', 'training', 'students'])
+const UNIVERSITY_TABS = new Set(['overview', 'demand', 'region', 'salary', 'students'])
 let historyIndex = 0
 const authReady = ref(false)
 const authAccount = ref(null)
