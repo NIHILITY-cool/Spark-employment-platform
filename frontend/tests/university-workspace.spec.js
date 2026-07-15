@@ -11,12 +11,17 @@ const dashboard = {
   education: [{ key: '本科及以上', jobCount: 4194 }, { key: '专科及以上', jobCount: 4651 }],
   companyScales: [{ key: '100-499人', jobCount: 2800 }, { key: '20-99人', jobCount: 2400 }],
   jobCategories: [{ key: '软件开发', jobCount: 1180 }, { key: '数据分析', jobCount: 840 }],
-  hotJobs: [{ key: '软件开发工程师', jobCount: 128, averageSalaryMin: 9000, averageSalaryMax: 15000 }],
+  hotJobs: [
+    { key: '软件开发工程师', jobCount: 128, averageSalaryMin: 9000, averageSalaryMax: 15000 },
+    { key: '数据分析师', jobCount: 82, averageSalaryMin: 7000, averageSalaryMax: 12000 },
+    { key: '算法工程师', jobCount: 45, averageSalaryMin: 14000, averageSalaryMax: 26000 },
+  ],
   hotSkills: [{ key: 'Python', jobCount: 841 }, { key: 'Java', jobCount: 782 }, { key: 'SQL', jobCount: 669 }],
   salaryBuckets: [{ key: '5k-8k', jobCount: 4800 }, { key: '8k-12k', jobCount: 3100 }],
   categoryFamilies: [
     { family: '技术研发', jobCount: 3180, typicalJobs: ['软件开发', '算法', '测试', '运维', '硬件工程师'], rule: '产出代码、技术方案或产品原型', categories: [{ key: '软件开发', jobCount: 1180 }] },
     { family: '产品运营', jobCount: 1860, typicalJobs: ['产品经理', '用户运营', '数据分析', '项目管理'], rule: '围绕产品生命周期，连接技术与市场', categories: [{ key: '数据分析', jobCount: 840 }] },
+    { family: '其他', jobCount: 220, typicalJobs: ['未归类岗位'], rule: '需要后续补充岗位词典', categories: [{ key: '其他', jobCount: 220 }] },
   ],
   regionalCategoryShares: [
     { city: '北京', jobCount: 722, categories: [{ key: '技术研发', jobCount: 260 }, { key: '产品运营', jobCount: 180 }] },
@@ -95,6 +100,8 @@ async function mockApi(page) {
 }
 
 test('university market and student controls update the evidence view', async ({ page }, testInfo) => {
+  const chartErrors = []
+  page.on('pageerror', (error) => chartErrors.push(error.message))
   await mockApi(page)
   await useAuthenticatedSession(page, 'UNIVERSITY')
   await page.goto('/')
@@ -115,6 +122,12 @@ test('university market and student controls update the evidence view', async ({
 
   await page.getByRole('button', { name: '岗位需求' }).click()
   await expect(page.getByText('岗位大类归并规则')).toBeVisible()
+  const demandCanvas = page.locator('.demand-chart-canvas canvas')
+  await page.getByRole('button', { name: '流向', exact: true }).click()
+  await expect(demandCanvas).toBeVisible()
+  await page.getByRole('button', { name: '雷达', exact: true }).click()
+  await expect(demandCanvas).toBeVisible()
+  expect(chartErrors).toEqual([])
 
   await page.getByRole('button', { name: '薪资技能' }).click()
   await expect(page.getByRole('heading', { name: '十大行业薪资分布' })).toBeVisible()

@@ -787,8 +787,9 @@ function renderDemandChart() {
     demandChart = echarts.init(demandChartElement.value)
     demandChart.on('click', (params) => {
       const name = params.data?.jobName || params.data?.name || params.name
+      const familyName = params.data?.familyName
       if ((current.value.hotJobs || []).some((item) => item.key === name)) selectedJob.value = name
-      if ((current.value.categoryFamilies || []).some((item) => item.family === name)) selectedFamily.value = name
+      if ((current.value.categoryFamilies || []).some((item) => item.family === (familyName || name))) selectedFamily.value = familyName || name
     })
   }
   demandChart.setOption(demandChartOption(), true)
@@ -1220,35 +1221,62 @@ function demandTreemapOption() {
 }
 
 function demandSankeyOption() {
-  const nodes = new Set()
+  const families = (current.value.categoryFamilies || [])
+    .filter((family) => Number(family.jobCount || 0) > 0)
+    .slice(0, 6)
+  const categories = families.flatMap((family) => (family.categories || [])
+    .filter((category) => Number(category.jobCount || 0) > 0)
+    .slice(0, 4)
+    .map((category) => ({ family, category, value: Number(category.jobCount || 0) })))
+  const maxCategoryCount = Math.max(1, ...categories.map((item) => item.value))
+  const demandTier = (value) => value >= maxCategoryCount * 0.6
+    ? '核心需求'
+    : value >= maxCategoryCount * 0.25 ? '稳定需求' : '长尾需求'
+  const tierColors = { 核心需求: '#c76f3d', 稳定需求: '#43826f', 长尾需求: '#8ba09a' }
+  const nodes = []
   const links = []
-  for (const family of current.value.categoryFamilies || []) {
-    if (!Number(family.jobCount || 0)) continue
-    nodes.add(family.family)
-    for (const category of (family.categories || []).slice(0, 4)) {
-      nodes.add(category.key)
-      links.push({ source: family.family, target: category.key, value: Number(category.jobCount || 0) })
-    }
+  const nodeIds = new Set()
+  const addNode = (node) => {
+    if (nodeIds.has(node.name)) return
+    nodeIds.add(node.name)
+    nodes.push(node)
   }
-  const salaryTarget = selectedSalaryMetric.value?.key || '主要薪资段'
-  nodes.add(salaryTarget)
-  for (const job of (current.value.hotJobs || []).slice(0, 8)) {
-    nodes.add(job.key)
-    links.push({ source: job.key, target: salaryTarget, value: Math.max(1, Math.round(Number(job.jobCount || 0) / 4)) })
+  for (const family of families) {
+    addNode({ name: `family:${family.family}`, displayName: family.family, familyName: family.family, value: Number(family.jobCount || 0), itemStyle: { color: familyColors[family.family] || '#3156a3' } })
+  }
+  for (const { family, category, value } of categories) {
+    const familyId = `family:${family.family}`
+    const categoryId = `category:${family.family}:${category.key}`
+    const tier = demandTier(value)
+    const tierId = `tier:${tier}`
+    addNode({ name: categoryId, displayName: category.key, familyName: family.family, value, itemStyle: { color: '#6f8ca0' } })
+    addNode({ name: tierId, displayName: tier, value, itemStyle: { color: tierColors[tier] } })
+    links.push({ source: familyId, target: categoryId, value, sourceLabel: family.family, targetLabel: category.key })
+    links.push({ source: categoryId, target: tierId, value, sourceLabel: category.key, targetLabel: tier })
   }
   return {
     ...demandBaseOption(),
+    tooltip: {
+      ...demandBaseOption().tooltip,
+      formatter: (params) => params.dataType === 'edge'
+        ? `${params.data.sourceLabel} → ${params.data.targetLabel}<br/>岗位数：${formatNumber(params.data.value)}`
+        : `${params.data.displayName || params.name}<br/>岗位数：${formatNumber(params.data.value || 0)}`,
+    },
     series: [{
       type: 'sankey',
-      top: 12,
-      left: 8,
-      right: 18,
-      bottom: 12,
+      top: 18,
+      left: 12,
+      right: 24,
+      bottom: 18,
       nodeAlign: 'justify',
-      data: [...nodes].map((name) => ({ name })),
+      nodeWidth: 15,
+      nodeGap: 12,
+      draggable: false,
+      layoutIterations: 32,
+      data: nodes,
       links,
-      lineStyle: { color: 'gradient', opacity: 0.28, curveness: 0.5 },
-      label: { color: '#31515d', fontSize: 11 },
+      lineStyle: { color: 'gradient', opacity: 0.34, curveness: 0.48 },
+      label: { color: '#31515d', fontSize: 11, formatter: ({ data }) => data.displayName || data.name },
       emphasis: { focus: 'adjacency' },
     }],
   }
@@ -1297,28 +1325,30 @@ function demandHeatmapOption() {
 
 function demandRadarOption() {
   const job = selectedJobMetric.value || current.value.hotJobs?.[0] || {}
-  const maxJob = maxCount(current.value.hotJobs || [])
-  const salary = Number(job.averageSalaryMax || current.value.summary.averageSalary || 0)
-  const maxSalary = Math.max(1, Number(current.value.summary.maxSalary || salary || 1))
-  const values = [
-    Math.round(Number(job.jobCount || 0) / maxJob * 100),
-    Math.round(salary / maxSalary * 100),
-    Math.min(100, 38 + (selectedFamilyMetric.value?.categories?.length || 1) * 9),
-    Math.min(100, 45 + (current.value.education?.length || 1) * 6),
-    Math.round(Number(current.value.summary.entryFriendlyCount || 0) / Math.max(1, Number(current.value.summary.jobCount || 0)) * 100),
+  const jobs = (current.value.hotJobs || []).filter((item) => Number(item.jobCount || 0) > 0)
+  const salaryMin = Number(job.averageSalaryMin || 0)
+  const salaryMax = Number(job.averageSalaryMax || 0)
+  const salaryMid = salaryMin && salaryMax ? Math.round((salaryMin + salaryMax) / 2) : salaryMax || salaryMin
+  const salarySpread = Math.max(0, salaryMax - salaryMin)
+  const metrics = [
+    { name: '需求热度', value: Number(job.jobCount || 0), population: jobs.map((item) => Number(item.jobCount || 0)), raw: `${formatNumber(job.jobCount || 0)} 个岗位` },
+    { name: '薪资下限', value: salaryMin, population: jobs.map((item) => Number(item.averageSalaryMin || 0)), raw: salaryValue(salaryMin) },
+    { name: '薪资中位', value: salaryMid, population: jobs.map((item) => Math.round((Number(item.averageSalaryMin || 0) + Number(item.averageSalaryMax || 0)) / 2)), raw: salaryValue(salaryMid) },
+    { name: '薪资上限', value: salaryMax, population: jobs.map((item) => Number(item.averageSalaryMax || 0)), raw: salaryValue(salaryMax) },
+    { name: '薪资跨度', value: salarySpread, population: jobs.map((item) => Math.max(0, Number(item.averageSalaryMax || 0) - Number(item.averageSalaryMin || 0))), raw: salaryValue(salarySpread) },
   ]
+  const values = metrics.map((metric) => relativeRankIndex(metric.value, metric.population))
   return {
     ...demandBaseOption(),
+    tooltip: {
+      ...demandBaseOption().tooltip,
+      formatter: () => `${job.key || '暂无岗位'}<br/>${metrics.map((metric, index) => `${metric.name}：${values[index]} / 100（${metric.raw}）`).join('<br/>')}<br/><span style="color:#7a8d89">指数按当前 Top ${jobs.length} 岗位的相对位次计算</span>`,
+    },
     radar: {
       center: ['50%', '53%'],
-      radius: '68%',
-      indicator: [
-        { name: '需求热度', max: 100 },
-        { name: '薪资水平', max: 100 },
-        { name: '技能复杂度', max: 100 },
-        { name: '学历门槛', max: 100 },
-        { name: '低经验友好', max: 100 },
-      ],
+      radius: '66%',
+      splitNumber: 4,
+      indicator: metrics.map((metric) => ({ name: `${metric.name}\n相对指数`, min: 0, max: 100 })),
       axisName: { color: '#31515d', fontSize: 11 },
       splitLine: { lineStyle: { color: '#dfe8e5' } },
       splitArea: { areaStyle: { color: ['#fbfdfc', '#f2f7f5'] } },
@@ -1416,6 +1446,17 @@ function ratio(part, total) {
 
 function maxCount(items) {
   return Math.max(1, ...(items || []).map((item) => Number(item.jobCount || 0)))
+}
+
+function relativeRankIndex(value, population) {
+  const target = Number(value || 0)
+  const values = (population || []).map((item) => Number(item || 0)).filter((item) => Number.isFinite(item))
+  if (!values.length || !target) return 0
+  if (values.length === 1) return 100
+  const less = values.filter((item) => item < target).length
+  const equal = values.filter((item) => item === target).length
+  if (equal === values.length) return 50
+  return Math.max(0, Math.min(100, Math.round((less + (equal - 1) / 2) / (values.length - 1) * 100)))
 }
 
 function widthFor(value, items) {
