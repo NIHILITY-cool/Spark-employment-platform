@@ -14,6 +14,15 @@ const AdminWorkspace = defineAsyncComponent(() => import('./components/AdminWork
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
 const adminRoute = window.location.pathname.replace(/\/+$/, '') === '/admin'
+const STUDENT_PATHS = {
+  market: '/student/market',
+  skills: '/student/skills',
+  regions: '/student/regions',
+  profile: '/student/profile',
+  recommendations: '/student/recommendations',
+}
+const UNIVERSITY_TABS = new Set(['overview', 'demand', 'region', 'salary', 'students'])
+let historyIndex = 0
 const authReady = ref(false)
 const authAccount = ref(null)
 const authRole = ref('STUDENT')
@@ -31,6 +40,8 @@ const cityOptions = ref([])
 const categoryOptions = ref([])
 const view = ref('landing')
 const studentTab = ref('profile')
+const universityTab = ref('overview')
+const universityStudentPage = ref(1)
 const favorites = ref(new Set(JSON.parse(localStorage.getItem('favoriteJobs') || '[]')))
 const selectedSkill = ref('')
 const skillPage = ref(1)
@@ -67,6 +78,113 @@ const skillPageCount = computed(() => Math.max(1, Math.ceil(skillSignals.value.l
 const visibleSkillSignals = computed(() => skillSignals.value.slice((skillPage.value - 1) * SKILLS_PER_PAGE, skillPage.value * SKILLS_PER_PAGE))
 const jobPageItems = computed(() => pageItems(jobPage.value, jobPageCount.value))
 const skillPageItems = computed(() => pageItems(skillPage.value, skillPageCount.value))
+
+function normalizePathname(pathname = window.location.pathname) {
+  const normalized = pathname.replace(/\/+$/, '')
+  return normalized || '/'
+}
+
+function readRoute() {
+  const pathname = normalizePathname()
+  const params = new URLSearchParams(window.location.search)
+  if (pathname === '/login/student') return { view: 'auth', role: 'STUDENT' }
+  if (pathname === '/login/university') return { view: 'auth', role: 'UNIVERSITY' }
+  if (pathname === STUDENT_PATHS.market) {
+    return {
+      view: 'market',
+      jobPage: Math.max(1, Number(params.get('page')) || 1),
+      keyword: params.get('keyword') || '', city: params.get('city') || '', category: params.get('category') || '',
+    }
+  }
+  if (pathname === STUDENT_PATHS.skills) return { view: 'skills', skillPage: Math.max(1, Number(params.get('page')) || 1) }
+  if (pathname === STUDENT_PATHS.regions) return { view: 'regions' }
+  if (pathname === STUDENT_PATHS.profile) return { view: 'student', studentTab: 'profile' }
+  if (pathname === STUDENT_PATHS.recommendations) return { view: 'student', studentTab: 'recommendations' }
+  if (pathname === '/university') {
+    const tab = params.get('tab')
+    const universityTab = UNIVERSITY_TABS.has(tab) ? tab : 'overview'
+    return {
+      view: 'university', universityTab,
+      universityStudentPage: universityTab === 'students' ? Math.max(1, Number(params.get('page')) || 1) : 1,
+    }
+  }
+  return { view: 'landing' }
+}
+
+function isStudentView(nextView) {
+  return ['market', 'skills', 'regions', 'student'].includes(nextView)
+}
+
+function pathForRoute(route) {
+  if (route.view === 'auth') return route.role === 'UNIVERSITY' ? '/login/university' : '/login/student'
+  if (route.view === 'market') {
+    const params = new URLSearchParams()
+    if (jobPage.value > 1) params.set('page', String(jobPage.value))
+    if (keyword.value.trim()) params.set('keyword', keyword.value.trim())
+    if (city.value) params.set('city', city.value)
+    if (category.value) params.set('category', category.value)
+    const query = params.toString()
+    return `${STUDENT_PATHS.market}${query ? `?${query}` : ''}`
+  }
+  if (route.view === 'skills') return `${STUDENT_PATHS.skills}${skillPage.value > 1 ? `?page=${skillPage.value}` : ''}`
+  if (route.view === 'regions') return STUDENT_PATHS.regions
+  if (route.view === 'student') return STUDENT_PATHS[route.studentTab || studentTab.value] || STUDENT_PATHS.profile
+  if (route.view === 'university') {
+    const params = new URLSearchParams()
+    if (universityTab.value !== 'overview') params.set('tab', universityTab.value)
+    if (universityTab.value === 'students' && universityStudentPage.value > 1) params.set('page', String(universityStudentPage.value))
+    const query = params.toString()
+    return `/university${query ? `?${query}` : ''}`
+  }
+  return '/'
+}
+
+function applyRoute(route) {
+  view.value = route.view
+  if (route.role) authRole.value = route.role
+  if (route.studentTab) studentTab.value = route.studentTab
+  if (route.universityTab) universityTab.value = route.universityTab
+  if ('universityStudentPage' in route) universityStudentPage.value = route.universityStudentPage
+  if (route.view === 'market') {
+    if ('keyword' in route) keyword.value = route.keyword
+    if ('city' in route) city.value = route.city
+    if ('category' in route) category.value = route.category
+    if ('jobPage' in route) jobPage.value = route.jobPage
+  }
+  if (route.view === 'skills') skillPage.value = route.skillPage || 1
+}
+
+function replaceLocation(route = readRoute()) {
+  const path = pathForRoute(route)
+  if (`${window.location.pathname}${window.location.search}` !== path) {
+    window.history.replaceState({ employmentRoute: true, index: historyIndex }, '', path)
+  }
+}
+
+function navigate(route, { replace = false, scroll = true } = {}) {
+  applyRoute(route)
+  const path = pathForRoute(route)
+  if (`${window.location.pathname}${window.location.search}` !== path) {
+    if (replace) window.history.replaceState({ employmentRoute: true, index: historyIndex }, '', path)
+    else {
+      historyIndex += 1
+      window.history.pushState({ employmentRoute: true, index: historyIndex }, '', path)
+    }
+  }
+  if (scroll) nextTick(() => window.scrollTo({ top: 0, behavior: 'auto' }))
+}
+
+function initializeHistory() {
+  const state = window.history.state
+  if (state?.employmentRoute) historyIndex = Number(state.index) || 0
+  else window.history.replaceState({ employmentRoute: true, index: historyIndex }, '', `${window.location.pathname}${window.location.search}`)
+}
+
+function handlePopState(event) {
+  historyIndex = Number(event.state?.index) || 0
+  applyRoute(readRoute())
+  void reconcileRoute()
+}
 
 function salary(job) {
   if (!job.salaryMin || !job.salaryMax) return '薪资面议'
@@ -118,7 +236,8 @@ async function loadFilters() {
 async function search(requestedPage = 1) {
   loading.value = true
   message.value = ''
-  const safePage = Math.min(Math.max(Number(requestedPage) || 1, 1), jobPageCount.value)
+  const requested = Math.max(Number(requestedPage) || 1, 1)
+  const safePage = total.value ? Math.min(requested, jobPageCount.value) : requested
   const params = new URLSearchParams({ page: String(safePage), size: String(JOBS_PER_PAGE) })
   if (keyword.value.trim()) params.set('keyword', keyword.value.trim())
   if (city.value) params.set('city', city.value)
@@ -139,19 +258,20 @@ async function search(requestedPage = 1) {
     message.value = '当前显示演示数据：本机前端已启动，等待虚拟机后端服务开放后将自动读取真实岗位。'
   } finally {
     loading.value = false
+    if (view.value === 'market') replaceLocation({ view: 'market' })
   }
 }
 
 function changeJobPage(page) {
   if (page < 1 || page > jobPageCount.value || page === jobPage.value || loading.value) return
   search(page)
-  document.querySelector('#jobs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function changeSkillPage(page) {
   if (page < 1 || page > skillPageCount.value || page === skillPage.value) return
   skillPage.value = page
   if (!visibleSkillSignals.value.some((item) => item.name === selectedSkill.value)) selectedSkill.value = visibleSkillSignals.value[0]?.name || ''
+  replaceLocation({ view: 'skills' })
 }
 
 function reset() {
@@ -162,32 +282,37 @@ function reset() {
 }
 
 function openStudent(tab = 'profile') {
-  studentTab.value = tab
-  view.value = 'student'
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  navigate({ view: 'student', studentTab: tab })
+}
+
+function setStudentTab(tab) {
+  if (!['profile', 'recommendations'].includes(tab) || tab === studentTab.value) return
+  navigate({ view: 'student', studentTab: tab })
+}
+
+function setUniversityTab(tab) {
+  if (!UNIVERSITY_TABS.has(tab) || tab === universityTab.value) return
+  navigate({ view: 'university', universityTab: tab })
+}
+
+function setUniversityStudentPage(page) {
+  if (universityTab.value !== 'students' || page === universityStudentPage.value) return
+  navigate({ view: 'university', universityTab: 'students', universityStudentPage: page }, { replace: true, scroll: false })
 }
 
 function enterStudent() {
   if (authAccount.value?.role === 'STUDENT') showMarket()
-  else {
-    authRole.value = 'STUDENT'
-    view.value = 'auth'
-  }
+  else navigate({ view: 'auth', role: 'STUDENT' })
 }
 
 function enterUniversity() {
-  if (authAccount.value?.role === 'UNIVERSITY') {
-    view.value = 'university'
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  } else {
-    authRole.value = 'UNIVERSITY'
-    view.value = 'auth'
-  }
+  if (authAccount.value?.role === 'UNIVERSITY') navigate({ view: 'university', universityTab: 'overview' })
+  else navigate({ view: 'auth', role: 'UNIVERSITY' })
 }
 
 function showPortal() {
-  view.value = 'landing'
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  if (view.value === 'auth' && historyIndex > 0) window.history.back()
+  else navigate({ view: 'landing' }, { replace: view.value === 'auth' })
 }
 
 async function handleAuthenticated(session) {
@@ -195,11 +320,10 @@ async function handleAuthenticated(session) {
   authAccount.value = session.account
   if (session.account.role === 'STUDENT') {
     await Promise.all([search(1), loadMarket(), loadFilters()])
-    showMarket()
+    navigate({ view: 'market' }, { replace: true })
   } else if (session.account.role === 'UNIVERSITY') {
     await loadFilters()
-    view.value = 'university'
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    navigate({ view: 'university', universityTab: 'overview' }, { replace: true })
   }
 }
 
@@ -209,31 +333,29 @@ async function logout() {
   authAccount.value = null
   jobs.value = []
   total.value = 0
-  showPortal()
+  navigate({ view: 'landing' }, { replace: true })
 }
 
 function showMarket(anchor = '') {
-  view.value = 'market'
+  const changingView = view.value !== 'market'
+  navigate({ view: 'market' }, { scroll: changingView && !anchor })
   nextTick(() => {
     if (anchor) document.querySelector(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    else window.scrollTo({ top: 0, behavior: 'smooth' })
   })
 }
 
 function showSkills() {
-  view.value = 'skills'
+  navigate({ view: 'skills' })
   if (!selectedSkill.value) selectedSkill.value = skillSignals.value[0]?.name || ''
-  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 function showRegions() {
-  view.value = 'regions'
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  navigate({ view: 'regions' })
 }
 
 function browseCityJobs(cityName) {
   city.value = cityName
-  view.value = 'market'
+  navigate({ view: 'market' }, { scroll: false })
   nextTick(() => {
     search(1)
     document.querySelector('#jobs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -278,37 +400,68 @@ async function bootstrapAuth() {
     authReady.value = true
     return
   }
+  applyRoute(readRoute())
   const session = getAuthSession()
   if (!session?.token) {
     authReady.value = true
+    await reconcileRoute()
     return
   }
   try {
     const account = await apiRequest(apiBase, '/auth/me')
     authAccount.value = account
     if (account.role === 'STUDENT') {
-      await Promise.all([search(1), loadMarket(), loadFilters()])
-      view.value = 'market'
+      const route = readRoute()
+      await Promise.all([search(route.view === 'market' ? route.jobPage : 1), loadMarket(), loadFilters()])
     } else if (account.role === 'UNIVERSITY') {
       await loadFilters()
-      view.value = 'university'
     } else {
       clearAuthSession()
+      authAccount.value = null
     }
   } catch {
     clearAuthSession()
     authAccount.value = null
   } finally {
     authReady.value = true
+    await reconcileRoute()
+  }
+}
+
+async function reconcileRoute() {
+  if (adminRoute || !authReady.value) return
+  const route = readRoute()
+  const account = authAccount.value
+  if (!account) {
+    if (isStudentView(route.view)) navigate({ view: 'auth', role: 'STUDENT' }, { replace: true, scroll: false })
+    else if (route.view === 'university') navigate({ view: 'auth', role: 'UNIVERSITY' }, { replace: true, scroll: false })
+    else applyRoute(route)
+    return
+  }
+
+  if (account.role === 'STUDENT') {
+    if (!isStudentView(route.view)) navigate({ view: 'market' }, { replace: true, scroll: false })
+    else applyRoute(route)
+    return
+  }
+
+  if (account.role === 'UNIVERSITY') {
+    if (route.view !== 'university') navigate({ view: 'university', universityTab: 'overview' }, { replace: true, scroll: false })
+    else applyRoute(route)
   }
 }
 
 onMounted(async () => {
+  initializeHistory()
   window.addEventListener('keydown', handleGlobalKeydown)
+  window.addEventListener('popstate', handlePopState)
   await bootstrapAuth()
 })
 
-onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown))
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+  window.removeEventListener('popstate', handlePopState)
+})
 </script>
 
 <template>
@@ -320,7 +473,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
 
     <AuthGateway v-else-if="view === 'auth'" :api-base="apiBase" :role="authRole" @authenticated="handleAuthenticated" @back="showPortal" />
 
-    <UniversityWorkspace v-else-if="view === 'university'" :api-base="apiBase" :city-options="cityOptions" @logout="logout" />
+    <UniversityWorkspace v-else-if="view === 'university'" :api-base="apiBase" :city-options="cityOptions" :initial-tab="universityTab" :initial-student-page="universityStudentPage" @student-page-change="setUniversityStudentPage" @tab-change="setUniversityTab" @logout="logout" />
 
     <template v-else>
     <header class="topbar">
@@ -444,7 +597,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
 
     <StudentRegionPage v-else-if="view === 'regions'" :api-base="apiBase" @browse-city="browseCityJobs" />
 
-    <StudentWorkspace v-else :api-base="apiBase" :student-id="authAccount.studentId" :city-options="cityOptions" :category-options="categoryOptions" :initial-tab="studentTab" @back-to-market="showMarket()" />
+    <StudentWorkspace v-else :api-base="apiBase" :student-id="authAccount.studentId" :city-options="cityOptions" :category-options="categoryOptions" :initial-tab="studentTab" @back-to-market="showMarket()" @tab-change="setStudentTab" />
     </template>
 
     <JobDetailDrawer :detail="activeJobDetail" :loading="jobDetailLoading" :error="jobDetailError" @close="closeJobDetail" />

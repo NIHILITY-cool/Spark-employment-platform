@@ -35,7 +35,7 @@ const props = defineProps({
   initialTab: { type: String, default: 'profile' },
 })
 
-const emit = defineEmits(['back-to-market'])
+const emit = defineEmits(['back-to-market', 'tab-change'])
 
 const activeTab = ref(props.initialTab)
 const loading = ref(true)
@@ -92,6 +92,12 @@ const dimensions = [
 watch(() => props.initialTab, (value) => {
   activeTab.value = value
 })
+
+function selectTab(tab) {
+  if (activeTab.value === tab) return
+  activeTab.value = tab
+  emit('tab-change', tab)
+}
 
 function showNotice(message) {
   notice.value = message
@@ -306,10 +312,10 @@ onMounted(loadWorkspace)
     </div>
 
     <div class="workspace-tabs" role="tablist" aria-label="学生工作台视图">
-      <button :class="{ active: activeTab === 'profile' }" role="tab" :aria-selected="activeTab === 'profile'" @click="activeTab = 'profile'">
+      <button :class="{ active: activeTab === 'profile' }" role="tab" :aria-selected="activeTab === 'profile'" @click="selectTab('profile')">
         <UserRound :size="17" />画像与期望
       </button>
-      <button :class="{ active: activeTab === 'recommendations' }" role="tab" :aria-selected="activeTab === 'recommendations'" @click="activeTab = 'recommendations'">
+      <button :class="{ active: activeTab === 'recommendations' }" role="tab" :aria-selected="activeTab === 'recommendations'" @click="selectTab('recommendations')">
         <Sparkles :size="17" />Top10 推荐<span class="tab-count">{{ recommendations.length }}</span>
       </button>
     </div>
@@ -417,7 +423,7 @@ onMounted(loadWorkspace)
           <div><dt>实践证据</dt><dd>{{ experiences.length }} 条</dd></div>
         </dl>
         <div class="overview-terms"><span>经历命中</span><div><b v-for="term in topExperienceTerms" :key="term">{{ term }}</b><i v-if="!topExperienceTerms.length">暂无</i></div></div>
-        <button class="command secondary" type="button" @click="activeTab = 'profile'"><Plus :size="16" />更新完整画像</button>
+        <button class="command secondary" type="button" @click="selectTab('profile')"><Plus :size="16" />更新完整画像</button>
       </aside>
 
       <section class="recommendation-results">
@@ -426,7 +432,7 @@ onMounted(loadWorkspace)
           <button class="icon-command refresh-command" type="button" title="刷新推荐" :disabled="saving === 'recommendations'" @click="refreshRecommendations"><RefreshCw :class="{ spin: saving === 'recommendations' }" :size="18" /></button>
         </div>
 
-        <div v-if="!recommendations.length" class="recommendation-empty"><BriefcaseBusiness :size="28" /><h3>还没有推荐结果</h3><p>先完善岗位方向和实践经历，再重新计算。</p><button class="command primary" @click="activeTab = 'profile'">完善画像<ArrowRight :size="16" /></button></div>
+        <div v-if="!recommendations.length" class="recommendation-empty"><BriefcaseBusiness :size="28" /><h3>还没有推荐结果</h3><p>先完善岗位方向和实践经历，再重新计算。</p><button class="command primary" @click="selectTab('profile')">完善画像<ArrowRight :size="16" /></button></div>
 
         <article v-for="(item, index) in recommendations" v-else :key="item.job.jobKey" class="recommendation-row" :class="{ expanded: expandedJob === item.job.jobKey }">
           <button class="recommendation-summary" type="button" :aria-expanded="expandedJob === item.job.jobKey" @click="toggleJob(item.job.jobKey)">

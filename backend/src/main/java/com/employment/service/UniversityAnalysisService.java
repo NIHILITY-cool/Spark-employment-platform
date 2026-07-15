@@ -10,10 +10,7 @@ import com.employment.dto.HeatmapCell;
 import com.employment.dto.IndustrySalaryMetric;
 import com.employment.dto.IndustrySalaryResponse;
 import com.employment.dto.RegionalCategoryShare;
-import com.employment.dto.RegionalDemandCell;
 import com.employment.dto.SalaryBucket;
-import com.employment.dto.TrainingAlignmentResponse;
-import com.employment.dto.TrainingDemandSummary;
 import com.employment.dto.UniversityDashboardFilter;
 import com.employment.dto.UniversityMarketDashboardResponse;
 import com.employment.dto.UniversityMarketSummary;
@@ -33,7 +30,6 @@ import java.util.regex.Pattern;
 
 @Service
 public class UniversityAnalysisService {
-    private static final Map<String, String> MAJOR_CATEGORIES = majorCategories();
     private static final Map<String, CategoryFamilyDefinition> CATEGORY_FAMILIES = categoryFamilies();
     private static final Map<String, String> INDUSTRY_RULES = industryRules();
     private static final LocalDate DEMO_BATCH_DATE = LocalDate.of(2026, 7, 11);
@@ -158,71 +154,6 @@ public class UniversityAnalysisService {
                 dashboardSuggestions(summary, categoryFamilies, cities, hotSkills), dataQuality,
                 "基于 Spark 清洗后写入 MySQL 的 " + batchDate
                         + " 公开岗位批次；高校端只展示市场需求信号，不生成学生就业率或培养质量结论。");
-    }
-
-    public TrainingAlignmentResponse trainingAlignment(String requestedMajor, String requestedCity) {
-        return trainingAlignmentFromDatabase(requestedMajor, requestedCity);
-    }
-
-    private TrainingAlignmentResponse trainingAlignmentFromDatabase(String requestedMajor, String requestedCity) {
-        String major = MAJOR_CATEGORIES.containsKey(requestedMajor)
-                ? requestedMajor : MAJOR_CATEGORIES.keySet().iterator().next();
-        String category = MAJOR_CATEGORIES.get(major);
-        String city = normalizeCity(requestedCity);
-        MapSqlParameterSource parameters = new MapSqlParameterSource()
-                .addValue("category", category).addValue("city", city)
-                .addValue("provinceLevelLocations", LocationScope.provinceLevelLocations());
-        String filter = " WHERE j.job_status = 'active' AND j.job_category = :category "
-                + (StringUtils.hasText(city) ? " AND j.city = :city " : "");
-
-        Map<String, Object> summaryRow = jdbc.queryForMap("""
-                SELECT COUNT(*) AS job_count,
-                       SUM(CASE WHEN j.experience_requirement = ''
-                                  OR j.experience_requirement LIKE '%不限%'
-                                  OR j.experience_requirement LIKE '%应届%'
-                                  OR j.experience_requirement LIKE '%1年以内%' THEN 1 ELSE 0 END) AS entry_friendly_count,
-                       ROUND(AVG(j.salary_min), 0) AS average_salary_min,
-                       ROUND(AVG(j.salary_max), 0) AS average_salary_max
-                FROM job j
-                """ + filter, parameters);
-
-        List<DemandMetric> skills = metrics("""
-                SELECT js.skill_name AS dimension_key, COUNT(DISTINCT j.job_key) AS job_count,
-                       NULL AS average_salary_min, NULL AS average_salary_max
-                FROM job j JOIN job_skill js ON js.job_key = j.job_key
-                """ + filter + " GROUP BY js.skill_name ORDER BY job_count DESC, dimension_key LIMIT 12", parameters);
-        TrainingDemandSummary summary = new TrainingDemandSummary(number(summaryRow, "job_count"),
-                number(summaryRow, "entry_friendly_count"), decimal(summaryRow, "average_salary_min"),
-                decimal(summaryRow, "average_salary_max"), skills.size());
-
-        List<DemandMetric> cities = metrics("""
-                SELECT j.city AS dimension_key, COUNT(*) AS job_count,
-                       ROUND(AVG(j.salary_min), 0) AS average_salary_min,
-                       ROUND(AVG(j.salary_max), 0) AS average_salary_max
-                FROM job j WHERE j.job_status = 'active' AND j.job_category = :category
-                  AND j.city NOT IN (:provinceLevelLocations)
-                GROUP BY j.city ORDER BY job_count DESC, dimension_key LIMIT 10
-                """, parameters);
-        List<DemandMetric> industries = metrics("""
-                SELECT COALESCE(NULLIF(j.industry, ''), '未标注') AS dimension_key, COUNT(*) AS job_count,
-                       ROUND(AVG(j.salary_min), 0) AS average_salary_min,
-                       ROUND(AVG(j.salary_max), 0) AS average_salary_max
-                FROM job j
-                """ + filter + " GROUP BY dimension_key ORDER BY job_count DESC, dimension_key LIMIT 10", parameters);
-        List<DemandMetric> education = metrics("""
-                SELECT COALESCE(NULLIF(j.education_requirement, ''), '不限') AS dimension_key, COUNT(*) AS job_count,
-                       NULL AS average_salary_min, NULL AS average_salary_max
-                FROM job j
-                """ + filter + " GROUP BY dimension_key ORDER BY job_count DESC, dimension_key", parameters);
-
-        List<RegionalDemandCell> matrix = regionalMatrix(parameters);
-
-        LocalDate batchDate = currentBatchDate();
-        return new TrainingAlignmentResponse(batchDate, major, category, city,
-                MAJOR_CATEGORIES, summary, cities, industries, education, skills, matrix,
-                suggestions(summary, skills, cities, city),
-                "基于 Spark 清洗后写入 MySQL 的 " + batchDate
-                        + " 公开岗位批次；仅反映近期市场需求，不代表培养质量或长期预测。" );
     }
 
     public IndustrySalaryResponse industrySalaryDistribution(String requestedCity) {
@@ -527,16 +458,6 @@ public class UniversityAnalysisService {
         return result;
     }
 
-    static Map<String, String> majorCategories() {
-        LinkedHashMap<String, String> mapping = new LinkedHashMap<>();
-        mapping.put("数据科学与大数据技术", "大数据开发");
-        mapping.put("计算机科学与技术", "后端开发");
-        mapping.put("软件工程", "前端开发");
-        mapping.put("统计学", "数据分析");
-        mapping.put("人工智能", "人工智能");
-        return Collections.unmodifiableMap(mapping);
-    }
-
     static Map<String, String> industryRules() {
         LinkedHashMap<String, String> rules = new LinkedHashMap<>();
         rules.put("金融", "金融|银行|证券|保险|基金|信贷|投资|理财|风控|会计|审计|财务|税务");
@@ -557,24 +478,6 @@ public class UniversityAnalysisService {
         return INDUSTRY_RULES.entrySet().stream()
                 .filter(rule -> Pattern.compile(rule.getValue()).matcher(text).find())
                 .map(Map.Entry::getKey).findFirst().orElse("其他");
-    }
-
-    static List<String> suggestions(TrainingDemandSummary summary, List<DemandMetric> skills,
-                                    List<DemandMetric> cities, String city) {
-        List<String> result = new ArrayList<>();
-        if (!skills.isEmpty()) {
-            result.add("优先评估 " + String.join("、", skills.stream().limit(3).map(DemandMetric::key).toList())
-                    + " 是否已覆盖在课程或项目训练中。");
-        }
-        double friendlyRate = summary.jobCount() == 0 ? 0
-                : 100.0 * summary.entryFriendlyCount() / summary.jobCount();
-        if (friendlyRate < 35) result.add("低经验门槛岗位占比较低，建议增加企业项目和实践经历训练。" );
-        if (!StringUtils.hasText(city) && !cities.isEmpty()) {
-            result.add("该方向岗位主要集中在 " + String.join("、", cities.stream().limit(3).map(DemandMetric::key).toList())
-                    + "，可作为校企合作区域参考。" );
-        }
-        if (summary.jobCount() == 0) result.add("当前筛选范围没有岗位样本，请扩大地区或调整专业方向。" );
-        return result;
     }
 
     private UniversityMarketDashboardResponse demoMarketDashboard(String requestedCity, String requestedIndustry,
@@ -614,28 +517,6 @@ public class UniversityAnalysisService {
                 demoSalaryBuckets(rows), categoryFamilies, demoRegionalShares(rows), demoHeatmap(rows),
                 dashboardSuggestions(summary, categoryFamilies, cities, hotSkills), demoQuality(jobCount),
                 "后端演示聚合数据：数据库或 SQL 暂不可用时由 Spring Boot 返回，接口仍保持 200；连接 MySQL 后会自动切换为真实岗位聚合。");
-    }
-
-    private TrainingAlignmentResponse demoTrainingAlignment(String requestedMajor, String requestedCity) {
-        String major = MAJOR_CATEGORIES.containsKey(requestedMajor)
-                ? requestedMajor : MAJOR_CATEGORIES.keySet().iterator().next();
-        String category = MAJOR_CATEGORIES.get(major);
-        String city = normalizeCity(requestedCity);
-        List<DemoJobRow> rows = demoRows().stream()
-                .filter(row -> category.equals(row.category()) || categoryFamily(row.category(), row.jobName()).equals("技术研发"))
-                .filter(row -> !StringUtils.hasText(city) || row.city().equals(city) || row.province().equals(city))
-                .toList();
-        List<DemandMetric> skills = demoSkillMetrics(rows).stream().limit(12).toList();
-        long jobCount = demoSum(rows);
-        TrainingDemandSummary summary = new TrainingDemandSummary(jobCount, Math.round(jobCount * 0.67),
-                demoAverageSalaryMin(rows), demoAverageSalaryMax(rows), skills.size());
-        List<RegionalDemandCell> matrix = demoTrainingMatrix();
-        return new TrainingAlignmentResponse(DEMO_BATCH_DATE, major, category, city, MAJOR_CATEGORIES,
-                summary, demoMetrics(rows, DemoJobRow::province, 10),
-                demoMetrics(rows, DemoJobRow::industry, 10),
-                demoMetrics(rows, DemoJobRow::education, 10), skills, matrix,
-                suggestions(summary, skills, demoMetrics(rows, DemoJobRow::province, 10), city),
-                "后端演示聚合数据：数据库或 SQL 暂不可用时由 Spring Boot 返回，接口仍保持 200；仅用于联调和页面验收，不代表最终真实统计。");
     }
 
     private static boolean demoMatches(DemoJobRow row, String city, String industry, String education,
@@ -769,17 +650,6 @@ public class UniversityAnalysisService {
                 "数据质量用于说明岗位样本可解释性，不是高校业务效果评分。");
     }
 
-    private static List<RegionalDemandCell> demoTrainingMatrix() {
-        return List.of(
-                new RegionalDemandCell("北京", "大数据开发", 62),
-                new RegionalDemandCell("北京", "后端开发", 115),
-                new RegionalDemandCell("成都", "大数据开发", 48),
-                new RegionalDemandCell("成都", "数据分析", 73),
-                new RegionalDemandCell("上海", "大数据开发", 40),
-                new RegionalDemandCell("上海", "人工智能", 56)
-        );
-    }
-
     private static long demoSum(List<DemoJobRow> rows) {
         return rows.stream().mapToLong(DemoJobRow::count).sum();
     }
@@ -825,37 +695,6 @@ public class UniversityAnalysisService {
                 new DemoJobRow("半导体工艺工程师", "台积电", "台湾", "台湾", "电子通信", "本科及以上", "测试", "10000人以上", 11500, 21000, List.of("工艺", "质量管理", "统计分析"), 75),
                 new DemoJobRow("金融科技管培生", "香港交易所", "香港", "香港", "金融财会", "本科及以上", "产品", "1000-9999人", 13000, 23000, List.of("金融", "SQL", "英语"), 60)
         );
-    }
-
-    private List<RegionalDemandCell> regionalMatrix(MapSqlParameterSource parameters) {
-        List<RegionalDemandCell> rows = jdbc.query("""
-                SELECT j.city AS city,
-                       COALESCE(NULLIF(j.job_category, ''), '其他') AS category,
-                       COUNT(*) AS job_count
-                FROM job j
-                WHERE j.job_status = 'active'
-                  AND j.city <> ''
-                  AND j.city NOT IN (:provinceLevelLocations)
-                  AND j.job_category <> ''
-                  AND j.job_category <> '其他'
-                GROUP BY j.city, category
-                """, parameters, (rs, rowNum) -> new RegionalDemandCell(rs.getString("city"),
-                rs.getString("category"), rs.getLong("job_count")));
-        Map<String, Long> cityTotals = new LinkedHashMap<>();
-        Map<String, Long> categoryTotals = new LinkedHashMap<>();
-        for (RegionalDemandCell row : rows) {
-            cityTotals.put(row.city(), cityTotals.getOrDefault(row.city(), 0L) + row.jobCount());
-            categoryTotals.put(row.category(), categoryTotals.getOrDefault(row.category(), 0L) + row.jobCount());
-        }
-        List<String> topCities = topKeys(cityTotals, 6);
-        List<String> topCategories = topKeys(categoryTotals, 6);
-        return rows.stream()
-                .filter(row -> topCities.contains(row.city()) && topCategories.contains(row.category()))
-                .sorted((left, right) -> {
-                    int cityCompare = left.city().compareTo(right.city());
-                    return cityCompare != 0 ? cityCompare : left.category().compareTo(right.category());
-                })
-                .toList();
     }
 
     private static Map<String, CategoryFamilyDefinition> categoryFamilies() {

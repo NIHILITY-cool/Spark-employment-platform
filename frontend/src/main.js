@@ -11,6 +11,8 @@ import './student-region.css'
 import './auth.css'
 import './admin.css'
 import './student-insight.css'
+import './student-insight-loading.css'
+import './student-insight-pagination.css'
 import './pagination.css'
 import './job-detail.css'
 

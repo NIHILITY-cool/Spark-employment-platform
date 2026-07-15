@@ -20,9 +20,18 @@ test('student can register with student number, name and password', async ({ pag
 })
 
 test('admin route manages accounts without appearing in the portal', async ({ page }) => {
+  const students = Array.from({ length: 15 }, (_, index) => ({
+    id: index + 3,
+    role: 'STUDENT',
+    username: `2026${String(index + 1).padStart(3, '0')}`,
+    displayName: index === 0 ? '林同学' : `学生${index + 1}`,
+    studentId: index + 1,
+    enabled: index !== 13,
+    updatedAt: '2026-07-14T13:00:00',
+  }))
   const accounts = [
     { id: 2, role: 'UNIVERSITY', username: 'university', displayName: '高校就业中心', studentId: null, enabled: true, updatedAt: '2026-07-14T12:00:00' },
-    { id: 3, role: 'STUDENT', username: '2026001', displayName: '林同学', studentId: 1, enabled: true, updatedAt: '2026-07-14T13:00:00' },
+    ...students,
   ]
   await page.route((url) => url.pathname.startsWith('/api/'), async (route) => {
     const url = route.request().url()
@@ -36,4 +45,12 @@ test('admin route manages accounts without appearing in the portal', async ({ pa
   await page.getByRole('button', { name: /进入管理端/ }).click()
   await expect(page.getByRole('heading', { name: /学生与高校账号/ })).toBeVisible()
   await expect(page.getByText('林同学', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '下一页' })).toBeVisible()
+  await page.getByRole('button', { name: '下一页' }).click()
+  await expect(page.getByText('学生15', { exact: true })).toBeVisible()
+  await page.getByLabel('搜索学生账号').fill('2026014')
+  await expect(page.getByText('学生14', { exact: true })).toBeVisible()
+  await page.getByLabel('筛选账号状态').selectOption('disabled')
+  await expect(page.getByText('学生14', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy()
 })

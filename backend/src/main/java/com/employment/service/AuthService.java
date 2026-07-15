@@ -40,12 +40,15 @@ public class AuthService {
     private final JdbcTemplate jdbc;
     private final PasswordEncoder passwordEncoder;
     private final RedisSessionStore sessionStore;
+    private final StudentInsightCache studentInsightCache;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public AuthService(JdbcTemplate jdbc, PasswordEncoder passwordEncoder, RedisSessionStore sessionStore) {
+    public AuthService(JdbcTemplate jdbc, PasswordEncoder passwordEncoder, RedisSessionStore sessionStore,
+                       StudentInsightCache studentInsightCache) {
         this.jdbc = jdbc;
         this.passwordEncoder = passwordEncoder;
         this.sessionStore = sessionStore;
+        this.studentInsightCache = studentInsightCache;
     }
 
     @Transactional
@@ -80,6 +83,7 @@ public class AuthService {
                 statement.setLong(4, studentId);
                 return statement;
             }, accountKey);
+            studentInsightCache.invalidateAfterCommit();
             return createSession(new AuthenticatedAccount(requiredKey(accountKey), "STUDENT", studentNo, name, studentId, true));
         } catch (DuplicateKeyException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "该学号已注册");
@@ -130,7 +134,9 @@ public class AuthService {
     public List<AdminAccountView> accounts() {
         return jdbc.query("""
                 SELECT id, role, username, display_name, student_id, enabled, updated_at
-                FROM platform_account ORDER BY FIELD(role, 'UNIVERSITY', 'STUDENT', 'ADMIN'), updated_at DESC
+                FROM platform_account
+                WHERE role IN ('UNIVERSITY', 'STUDENT')
+                ORDER BY FIELD(role, 'UNIVERSITY', 'STUDENT'), updated_at DESC
                 """, (rs, rowNum) -> new AdminAccountView(rs.getLong("id"), rs.getString("role"),
                 rs.getString("username"), rs.getString("display_name"), nullableLong(rs, "student_id"),
                 rs.getBoolean("enabled"), rs.getTimestamp("updated_at").toLocalDateTime()));
@@ -138,21 +144,27 @@ public class AuthService {
 
     @Transactional
     public void resetPassword(Long accountId, String password) {
-        if (jdbc.update("UPDATE platform_account SET password_hash = ? WHERE id = ?",
-                passwordEncoder.encode(password), accountId) == 0) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "账号不存在");
-        }
+        requireStudentAccountTarget(accountId);
+        jdbc.update("UPDATE platform_account SET password_hash = ? WHERE id = ? AND role = 'STUDENT'",
+                passwordEncoder.encode(password), accountId);
         deleteAccountSessions(accountId);
     }
 
     @Transactional
     public void setEnabled(Long accountId, boolean enabled) {
-        AuthenticatedAccount current = currentAccount();
-        if (current.id().equals(accountId)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不能停用当前管理员账号");
-        if (jdbc.update("UPDATE platform_account SET enabled = ? WHERE id = ?", enabled, accountId) == 0) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "账号不存在");
-        }
+        requireStudentAccountTarget(accountId);
+        jdbc.update("UPDATE platform_account SET enabled = ? WHERE id = ? AND role = 'STUDENT'", enabled, accountId);
         if (!enabled) deleteAccountSessions(accountId);
+        studentInsightCache.invalidateAfterCommit();
+    }
+
+    private void requireStudentAccountTarget(Long accountId) {
+        String role = jdbc.query("SELECT role FROM platform_account WHERE id = ?",
+                rs -> rs.next() ? rs.getString("role") : null, accountId);
+        if (role == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "账号不存在");
+        if (!"STUDENT".equals(role)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "该操作仅适用于学生账号");
+        }
     }
 
     @Transactional

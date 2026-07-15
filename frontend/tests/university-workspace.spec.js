@@ -1,32 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { useAuthenticatedSession } from './auth-helper.js'
 
-const analysis = {
-  statDate: '2026-07-11',
-  major: '数据科学与大数据技术',
-  targetCategory: '大数据开发',
-  city: '',
-  availableMajors: {
-    数据科学与大数据技术: '大数据开发',
-    计算机科学与技术: '后端开发',
-    软件工程: '前端开发',
-    统计学: '数据分析',
-    人工智能: '人工智能',
-  },
-  summary: { jobCount: 286, entryFriendlyCount: 192, averageSalaryMin: 8200, averageSalaryMax: 13800, extractedSkillCount: 5 },
-  cities: [{ key: '北京', jobCount: 62 }, { key: '成都', jobCount: 48 }],
-  industries: [{ key: '计算机软件', jobCount: 96 }, { key: '互联网', jobCount: 74 }, { key: '制造业', jobCount: 31 }],
-  education: [{ key: '本科及以上', jobCount: 220 }, { key: '硕士及以上', jobCount: 41 }, { key: '不限', jobCount: 25 }],
-  skills: [{ key: 'SQL', jobCount: 140 }, { key: 'Python', jobCount: 120 }, { key: 'Spark', jobCount: 88 }, { key: 'Java', jobCount: 65 }, { key: 'Hadoop', jobCount: 52 }],
-  regionalMatrix: [
-    { city: '北京', category: '大数据开发', jobCount: 62 }, { city: '北京', category: '后端开发', jobCount: 115 },
-    { city: '成都', category: '大数据开发', jobCount: 48 }, { city: '成都', category: '后端开发', jobCount: 73 },
-    { city: '上海', category: '大数据开发', jobCount: 40 }, { city: '上海', category: '后端开发', jobCount: 96 },
-  ],
-  suggestions: ['优先评估 SQL、Python、Spark 是否已覆盖在课程或项目训练中。', '该方向岗位主要集中在北京、成都、上海，可作为校企合作区域参考。'],
-  dataBasis: '基于 Spark 清洗后写入 MySQL 的 2026-07-11 公开岗位批次；仅反映近期市场需求，不代表培养质量或长期预测。',
-}
-
 const dashboard = {
   statDate: '2026-07-11',
   filter: {},
@@ -83,22 +57,30 @@ const industrySalary = {
 const studentInsight = {
   summary: { studentCount: 3, profileCompletedCount: 2, difficultCount: 1, averageTopMatchScore: 67 },
   students: [
-    { studentId: 3, studentNo: '2026003', name: '周同学', college: '计算机学院', major: '软件工程', education: '本科', graduationYear: 2027, profileCompleted: false, lastSavedAt: '2026-07-14T12:00:00', skillCount: 0, experienceCount: 0, preferenceSaved: false, topMatchScore: 0, averageMatchScore: 0, bestJobName: '', bestJobCategory: '', difficult: true, status: '需重点关注', gaps: ['基本画像尚未完善', '技能清单未保存', '缺少项目或实习经历', '未保存就业期望'], evidence: [] },
+    { studentId: 3, studentNo: '2026003', name: '周同学', college: '计算机学院', major: '软件工程', education: '本科', graduationYear: 2027, profileCompleted: false, lastSavedAt: '2026-07-14T12:00:00', skillCount: 0, experienceCount: 0, preferenceSaved: false, topMatchScore: 0, averageMatchScore: 0, bestJobName: '', bestJobCategory: '', difficult: true, status: '重点支持', gaps: ['基本画像尚未完善', '技能清单未保存', '缺少项目或实习经历', '未保存就业期望'], evidence: [] },
     { studentId: 1, studentNo: '2026001', name: '林同学', college: '计算机学院', major: '数据科学与大数据技术', education: '本科', graduationYear: 2027, profileCompleted: true, lastSavedAt: '2026-07-14T13:10:00', skillCount: 5, experienceCount: 2, preferenceSaved: true, topMatchScore: 72, averageMatchScore: 65, bestJobName: '大数据开发工程师', bestJobCategory: '大数据开发', difficult: false, status: '匹配较好', gaps: ['实践经历与目标岗位关联偏弱'], evidence: ['已维护 5 项技能', '岗位方向符合期望'] },
   ],
   dataBasis: '学生情况以学生最后一次保存的画像、技能、经历和就业期望为准。',
+  page: 1,
+  size: 10,
+  total: 22,
+  totalPages: 3,
 }
 
 async function mockApi(page) {
   await page.route((url) => url.pathname.startsWith('/api/'), async (route) => {
     const url = route.request().url()
     if (url.includes('/auth/me')) await route.fulfill({ json: { id: 20, role: 'UNIVERSITY', username: 'university', displayName: '高校就业中心', studentId: null, enabled: true } })
-    else if (url.includes('/university/students')) await route.fulfill({ json: studentInsight })
+    else if (url.includes('/university/students')) {
+      const requestUrl = new URL(url)
+      const requestedPage = Number(requestUrl.searchParams.get('page') || 1)
+      const pageStudents = requestedPage === 2
+        ? [{ ...studentInsight.students[1], studentId: 12, studentNo: '2026012', name: '分页同学' }]
+        : studentInsight.students
+      await route.fulfill({ json: { ...studentInsight, page: requestedPage, students: pageStudents } })
+    }
     else if (url.includes('/university/market-dashboard')) {
       await route.fulfill({ json: dashboard })
-    } else if (url.includes('/university/training-alignment')) {
-      const requestUrl = new URL(url)
-      await route.fulfill({ json: { ...analysis, city: requestUrl.searchParams.get('city') || '' } })
     } else if (url.includes('/university/industry-salary-distribution')) {
       const requestUrl = new URL(url)
       await route.fulfill({ json: { ...industrySalary, city: requestUrl.searchParams.get('city') || '' } })
@@ -112,7 +94,7 @@ async function mockApi(page) {
   })
 }
 
-test('university training scenario controls update the evidence view', async ({ page }, testInfo) => {
+test('university market and student controls update the evidence view', async ({ page }, testInfo) => {
   await mockApi(page)
   await useAuthenticatedSession(page, 'UNIVERSITY')
   await page.goto('/')
@@ -120,9 +102,16 @@ test('university training scenario controls update the evidence view', async ({ 
   await expect(page.getByText('地区岗位结构占比')).toBeVisible()
 
   await page.getByRole('button', { name: '学生情况' }).click()
-  await expect(page.getByRole('heading', { name: /把需要帮助的人/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '优先跟进需要帮助的学生' })).toBeVisible()
   await expect(page.getByText('周同学', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('基本画像尚未完善')).toBeVisible()
+  const supportRequest = page.waitForRequest((request) => request.url().includes('/university/students?') && request.url().includes('status=support'))
+  await page.getByRole('button', { name: '重点支持', exact: true }).click()
+  await supportRequest
+  await expect(page.getByText('缺 3–4 项为重点支持')).toBeVisible()
+  await expect(page.getByText('匹配分低于 65 为常规跟进')).toBeVisible()
+  await page.getByRole('button', { name: '下一页学生' }).click()
+  await expect(page.getByText('分页同学', { exact: true }).first()).toBeVisible()
 
   await page.getByRole('button', { name: '岗位需求' }).click()
   await expect(page.getByText('岗位大类归并规则')).toBeVisible()
@@ -132,23 +121,7 @@ test('university training scenario controls update the evidence view', async ({ 
   await expect(page.locator('.industry-salary-chart canvas')).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('university-salary-desktop.png'), fullPage: true })
 
-  await page.getByRole('button', { name: '专业方向' }).click()
-  await expect(page.getByRole('heading', { name: '计划强化技能组合' })).toBeVisible()
-  await expect(page.getByText('286')).toBeVisible()
-
-  const coverage = page.locator('.coverage-display strong')
-  const initialCoverage = Number((await coverage.textContent()).replace('%', ''))
-  await page.getByRole('button', { name: /Java/ }).click()
-  const updatedCoverage = Number((await coverage.textContent()).replace('%', ''))
-  expect(updatedCoverage).toBeGreaterThan(initialCoverage)
-
-  const cityPicker = page.getByRole('combobox', { name: '地区范围' })
-  await cityPicker.fill('成都')
-  await page.getByRole('option', { name: '成都', exact: true }).click()
-  await expect(cityPicker).toHaveValue('成都')
-  await page.getByRole('button', { name: /更新分析/ }).click()
-  await expect(page.getByText('地区 × 岗位方向需求矩阵')).toBeVisible()
-  await expect(page.locator('.matrix-cell')).toHaveCount(6)
+  await expect(page.getByRole('button', { name: '专业方向' })).toHaveCount(0)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)
 })
@@ -162,9 +135,8 @@ test('university evidence view is contained on mobile', async ({ page }, testInf
   await expect(page.getByText('岗位大类归并规则')).toBeVisible()
   await page.getByRole('button', { name: '薪资技能' }).click()
   await expect(page.locator('.industry-salary-chart canvas')).toBeVisible()
-  await page.getByRole('button', { name: '专业方向' }).click()
-  await expect(page.getByText('计划强化技能组合')).toBeVisible()
+  await expect(page.getByRole('button', { name: '专业方向' })).toHaveCount(0)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)
-  await page.screenshot({ path: testInfo.outputPath('university-training-mobile.png'), fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('university-evidence-mobile.png'), fullPage: true })
 })
